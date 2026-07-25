@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Head -50)",
+      "WebSearch",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(mkdir \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\lib\\\\supabase\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\middleware.ts\" -ErrorAction SilentlyContinue)",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__apply_migration",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__execute_sql",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__list_projects",
+      "mcp__visualize__show_widget",
+      "PowerShell(cd \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"npm notice\" })",
+      "Bash(npx tsc *)",
+      "Bash(mkdir -p \"C:/Users/luisa/OneDrive/Desktop/Proyectos App terceros/app-lucy/web/app/\\(app\\)/salud/examen/[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\app\\\\\\(app\\)\\\\salud\\\\medicamento\\\\[id]\")",
+      "mcp__claude-in-chrome__navigate",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "Bash(mkdir -p \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\app\\\\\\(app\\)\\\\salud\\\\autorizacion\\\\[id]\")",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__restore_project",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__list_tables",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__deploy_edge_function",
+      "Bash(npx supabase *)",
+      "Bash(del \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\app\\\\auth\\\\callback\\\\route.ts\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@supabase/supabase-js/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e \"const GoTrueClient = require\\('C:/Users/luisa/OneDrive/Desktop/Proyectos App terceros/app-lucy/web/node_modules/@supabase/auth-js/dist/main/lib/GoTrueClient.js'\\); const src = require\\('fs'\\).readFileSync\\('C:/Users/luisa/OneDrive/Desktop/Proyectos App terceros/app-lucy/web/node_modules/@supabase/auth-js/dist/main/lib/GoTrueClient.js', 'utf8'\\); const match = src.match\\(/flowType[^'\\\\\"]*['\\\\\"]\\([^'\\\\\"]+\\)['\\\\\"].*DEFAULT/i\\) || src.match\\(/DEFAULT.*flowType[^'\\\\\"]*['\\\\\"]\\([^'\\\\\"]+\\)['\\\\\"]/\\) || src.match\\(/flowType\\\\s*=\\\\s*['\\\\\"]\\([^'\\\\\"]+\\)['\\\\\"].*\\\\|\\\\|/\\); console.log\\(match?.[1] ?? 'not found'\\); const match2 = src.match\\(/flowType.*pkce|pkce.*default|defaultFlowType/i\\); console.log\\(match2?.[0]?.substring\\(0,100\\) ?? 'not found2'\\)\")",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__get_project",
+      "Bash(node_modules/.bin/next dev *)",
+      "PowerShell(Stop-Process -Id 8448 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(netstat -ano)",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__list_edge_functions",
+      "PowerShell(npm install -g supabase 2>&1)",
+      "PowerShell(supabase --version 2>&1)",
+      "PowerShell(supabase projects list 2>&1)",
+      "PowerShell(gh auth status 2>&1)",
+      "PowerShell(winget install --id GitHub.cli --silent --accept-package-agreements --accept-source-agreements 2>&1)",
+      "PowerShell(npm install -g @githubnext/github-models 2>&1)",
+      "PowerShell(npm install -g gh 2>&1)"
+    ]
+  }
+}

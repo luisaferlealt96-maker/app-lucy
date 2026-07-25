@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Lucy App",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "serve"],
+      "port": 3001,
+      "cwd": "${workspaceRoot}/web",
+      "env": {
+        "NODE_OPTIONS": "--use-system-ca"
+      }
+    }
+  ]
+}
