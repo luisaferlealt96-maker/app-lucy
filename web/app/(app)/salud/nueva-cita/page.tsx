@@ -603,26 +603,17 @@ function NuevaCitaContent() {
                 ))}
               </div>
 
-              <AnimatePresence>
-                {authForm.estado === "en_tramite" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    style={{ overflow: "hidden" }}
-                  >
-                    <div className="flex flex-col gap-1.5 pt-0.5">
-                      <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
-                      <Input
-                        type="date"
-                        value={authForm.fecha_envio_eps}
-                        onChange={e => setAuth("fecha_envio_eps", e.target.value)}
-                        className="rounded-xl border-border bg-card h-12"
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className={`overflow-hidden transition-all duration-300 ${authForm.estado === "en_tramite" ? "max-h-28 opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}>
+                <div className="flex flex-col gap-1.5 pt-1">
+                  <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
+                  <Input
+                    type="date"
+                    value={authForm.fecha_envio_eps}
+                    onChange={e => setAuth("fecha_envio_eps", e.target.value)}
+                    className="rounded-xl border-border bg-card h-12"
+                  />
+                </div>
+              </div>
 
               {/* Notas */}
               <div className="flex flex-col gap-1.5">
