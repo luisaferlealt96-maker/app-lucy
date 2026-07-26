@@ -609,15 +609,17 @@ function NuevaCitaContent() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="flex flex-col gap-1.5 overflow-hidden"
+                    style={{ overflow: "hidden" }}
                   >
-                    <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
-                    <Input
-                      type="date"
-                      value={authForm.fecha_envio_eps}
-                      onChange={e => setAuth("fecha_envio_eps", e.target.value)}
-                      className="rounded-xl border-border bg-card h-12"
-                    />
+                    <div className="flex flex-col gap-1.5 pt-0.5">
+                      <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
+                      <Input
+                        type="date"
+                        value={authForm.fecha_envio_eps}
+                        onChange={e => setAuth("fecha_envio_eps", e.target.value)}
+                        className="rounded-xl border-border bg-card h-12"
+                      />
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -347,11 +347,13 @@ function NuevaAutorizacionContent() {
 
             {form.estado === "en_tramite" && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                className="flex flex-col gap-1.5 overflow-hidden">
-                <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
-                <Input type="date" value={form.fecha_envio_eps}
-                  onChange={e => set("fecha_envio_eps", e.target.value)}
-                  className="h-12 rounded-xl border-border bg-card" />
+                exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}>
+                <div className="flex flex-col gap-1.5 pt-0.5">
+                  <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
+                  <Input type="date" value={form.fecha_envio_eps}
+                    onChange={e => set("fecha_envio_eps", e.target.value)}
+                    className="h-12 rounded-xl border-border bg-card" />
+                </div>
               </motion.div>
             )}
 
