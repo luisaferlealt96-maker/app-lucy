@@ -628,7 +628,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
               {/* Acompañante */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-foreground uppercase tracking-wide">¿Quién la acompaña? (opcional)</label>
-                <Select value={editForm.acompanante_id} onValueChange={v => setEditForm(f => ({ ...f, acompanante_id: v ?? "" }))}>
+                <Select key={`acomp-${acompanantes.length}`} value={editForm.acompanante_id} onValueChange={v => setEditForm(f => ({ ...f, acompanante_id: v ?? "" }))}>
                   <SelectTrigger className="rounded-xl border-border bg-card h-12">
                     <SelectValue placeholder="Sin acompañante" />
                   </SelectTrigger>
