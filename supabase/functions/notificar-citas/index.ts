@@ -6,8 +6,9 @@ const WHATSAPP_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
 const SUPABASE_URL      = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+const ALLOWED_ORIGIN = Deno.env.get("APP_URL") ?? "https://app-lucy.vercel.app";
 const cors = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -355,11 +356,19 @@ serve(async (req) => {
 
     // ── CRON: autorizaciones EPS ─────────────────────────────────────────
     if (tipo === "autorizaciones") {
-      const { data: autorizaciones } = await sb.from("autorizaciones_eps").select("*").in("estado", ["sin_gestionar", "en_tramite"]);
+      const [{ data: autorizaciones }, { data: admins }] = await Promise.all([
+        sb.from("autorizaciones_eps").select("*").in("estado", ["sin_gestionar", "en_tramite"]),
+        sb.from("miembros_familia").select("nombre, telefono, user_id, rol").eq("activo", true).not("telefono", "is", null),
+      ]);
+      const adminsList = (admins ?? []).filter((m: { rol: string }) => m.rol === "admin") as { nombre: string; telefono: string; user_id: string | null }[];
       let enviados = 0;
 
       for (const a of autorizaciones ?? []) {
-        const receptores = await getRecipientes(sb, a.created_by);
+        const receptores: { nombre: string; telefono: string }[] = [...adminsList];
+        if (a.created_by) {
+          const creator = (admins ?? []).find((m: { user_id: string | null; rol: string }) => m.user_id === a.created_by && m.rol !== "admin") as { nombre: string; telefono: string } | undefined;
+          if (creator) receptores.push(creator);
+        }
         if (receptores.length === 0) continue;
         const diasRestant = diasRestantes(a.fecha_orden);
 

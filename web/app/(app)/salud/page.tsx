@@ -70,7 +70,7 @@ export default function SaludPage() {
     supabase.from("autorizaciones_eps")
       .select("*, cita:cita_id(id, especialidad, fecha_hora), examen:examen_id(id, nombre, tipo)")
       .order("fecha_orden", { ascending: false })
-      .then(({ data }) => { setAutorizaciones((data ?? []) as any); setLoadingAuth(false); });
+      .then(({ data }) => { setAutorizaciones((data ?? []) as AutorizacionEPS[]); setLoadingAuth(false); });
   }, []);
 
   // Edit datos clínicos
@@ -204,7 +204,7 @@ export default function SaludPage() {
               {loading ? (
                 <div className="flex flex-col gap-3">{[1,2].map(i => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
               ) : examenes.length === 0 ? (
-                <EmptyState icon={FlaskConical} texto="Sin exámenes registrados" href={nuevoExHref} cta="Agregar examen" />
+                <EmptyState icon={FlaskConical} texto="Sin procedimientos registrados" href={nuevoExHref} cta="Agregar" />
               ) : (
                 <div className="flex flex-col gap-3">
                   {examenes.map((ex, i) => <ExamenCard key={ex.id} examen={ex} index={i} />)}

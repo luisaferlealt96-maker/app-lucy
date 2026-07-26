@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Calendar, Clock, MapPin, Heart, User } from "lucide-react";
+import { Calendar, Clock, MapPin, Heart, User, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 import { useAbuelaData } from "@/hooks/useSalud";
 import { formatFechaHora } from "@/lib/utils/fecha";
 
@@ -11,11 +12,19 @@ export default function AbuelaCitasPage() {
 
   return (
     <div className="min-h-dvh bg-background pb-10 px-4">
+      {/* Botón de regreso */}
+      <div className="pt-12 pb-2">
+        <Link href="/abuela" className="inline-flex items-center gap-2 text-base font-semibold" style={{ color: "#C0546A" }}>
+          <ArrowLeft size={20} strokeWidth={2.5} />
+          Inicio
+        </Link>
+      </div>
+
       {/* Header grande y cálido */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="pt-16 pb-8 text-center"
+        className="pt-4 pb-8 text-center"
       >
         <div className="w-20 h-20 rounded-full bg-pillar-salud flex items-center justify-center mx-auto mb-4 text-5xl">
           👵

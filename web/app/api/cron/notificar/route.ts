@@ -6,6 +6,15 @@ const sanitize = (s: string) => s.replace(/[^\x20-\x7E]/g, "").trim();
 const TIPOS_VALIDOS = ["recordatorio", "autorizaciones", "resultados", "resumen_semanal"];
 
 export async function GET(request: NextRequest) {
+  // Vercel envía Authorization: Bearer <CRON_SECRET> en cada llamada de cron
+  const cronSecret = sanitize(process.env.CRON_SECRET ?? "");
+  if (cronSecret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   const tipo = request.nextUrl.searchParams.get("tipo");
 
   if (!tipo || !TIPOS_VALIDOS.includes(tipo)) {

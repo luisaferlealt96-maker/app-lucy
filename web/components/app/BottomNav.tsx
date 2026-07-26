@@ -26,7 +26,7 @@ export function BottomNav() {
               className={cn(
                 "flex flex-col items-center gap-0.5 py-2.5 px-4 min-w-[60px] rounded-xl transition-all duration-200",
                 isActive
-                  ? "text-primary"
+                  ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

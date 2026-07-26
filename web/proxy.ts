@@ -5,9 +5,13 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  // Si Supabase no está configurado aún, dejar pasar (modo desarrollo)
+  // Si Supabase no está configurado, bloquear acceso (fail-closed)
   if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.next({ request });
+    const pathname = request.nextUrl.pathname;
+    if (pathname === "/login" || pathname.startsWith("/auth/") || pathname.startsWith("/api/")) {
+      return NextResponse.next({ request });
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   let response = NextResponse.next({ request });
