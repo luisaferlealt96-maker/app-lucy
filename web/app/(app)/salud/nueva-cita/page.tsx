@@ -202,24 +202,24 @@ function NuevaCitaContent() {
             <button
               type="button"
               onClick={() => setTieneFecha(true)}
-              className="flex items-center justify-center gap-2 h-12 rounded-xl font-semibold text-sm transition-all"
+              className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-semibold transition-all"
               style={tieneFecha
                 ? { background: "#F2C5CE", color: "#C0546A", border: "2px solid #C0546A" }
                 : { background: "transparent", color: "var(--muted-foreground)", border: "1.5px solid var(--border)" }}
             >
-              <Calendar size={15} strokeWidth={2.5} />
-              Sí, ya la tengo
+              <Calendar size={16} strokeWidth={2.5} />
+              <span className="text-xs font-bold text-center leading-tight">Sí, ya la tengo</span>
             </button>
             <button
               type="button"
               onClick={() => setTieneFecha(false)}
-              className="flex items-center justify-center gap-2 h-12 rounded-xl font-semibold text-sm transition-all"
+              className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-semibold transition-all"
               style={!tieneFecha
                 ? { background: "#FFF3E0", color: "#e65100", border: "2px solid #e65100" }
                 : { background: "transparent", color: "var(--muted-foreground)", border: "1.5px solid var(--border)" }}
             >
-              <Clock size={15} strokeWidth={2.5} />
-              Pendiente por agendar
+              <Clock size={16} strokeWidth={2.5} />
+              <span className="text-xs font-bold text-center leading-tight">Pendiente por agendar</span>
             </button>
           </div>
           {!tieneFecha && (
