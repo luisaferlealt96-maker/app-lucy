@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/notificar?tipo=recordatorio",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/notificar?tipo=autorizaciones",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/notificar?tipo=resultados",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/notificar?tipo=resumen_semanal",
+      "schedule": "0 14 * * 0"
+    }
+  ]
+}

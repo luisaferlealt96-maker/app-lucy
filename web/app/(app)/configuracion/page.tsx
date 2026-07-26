@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Settings, User, Phone, Check, X, Plus, Pencil, Shield,
-  ChevronRight, UserCheck, UserX, Mail, Send, Link2, Link2Off, LogOut,
+  ChevronRight, UserCheck, UserX, Mail, Send, Link2, Link2Off, LogOut, Trash2, AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -44,6 +44,8 @@ export default function ConfiguracionPage() {
   const [invitando, setInvitando] = useState(false);
   const [invitado, setInvitado] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [showNuevo, setShowNuevo] = useState(false);
   const [nuevoForm, setNuevoForm] = useState(BLANK_FORM);
@@ -78,6 +80,23 @@ export default function ConfiguracionPage() {
     setSaveError(null);
     setInviteError(null);
     setInvitado(false);
+    setConfirmDelete(false);
+  };
+
+  const eliminarMiembro = async () => {
+    if (!editando) return;
+    setDeleting(true);
+    const res = await fetch("/api/eliminar-miembro", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ miembro_id: editando.id, auth_user_id: editando.user_id }),
+    });
+    setDeleting(false);
+    if (res.ok) {
+      setEditando(null);
+      setConfirmDelete(false);
+      await cargar();
+    }
   };
 
   const guardarEdicion = async () => {
@@ -460,6 +479,53 @@ export default function ConfiguracionPage() {
                 style={{ background: "#9B8EC4" }}>
                 {saving ? "Guardando…" : <><Check size={16} strokeWidth={2.5} /> Guardar cambios</>}
               </button>
+
+              {/* Eliminar — solo admin, no a sí mismo */}
+              {isAdmin && editando.user_id !== currentUserId && (
+                <div className="border-t border-border pt-4">
+                  {!confirmDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(true)}
+                      className="w-full flex items-center justify-center gap-2 h-11 rounded-2xl border-2 border-red-200 text-red-500 font-bold text-sm hover:bg-red-50 active:scale-[0.97] transition-all"
+                    >
+                      <Trash2 size={15} strokeWidth={2} /> Eliminar colaborador
+                    </button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border-2 border-red-200 p-4 flex flex-col gap-3"
+                      style={{ background: "#FFF5F5" }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={16} color="#ef4444" />
+                        <p className="text-sm font-bold text-red-600">¿Eliminar a {editando.nombre}?</p>
+                      </div>
+                      <p className="text-xs text-red-500">
+                        Se borrará su perfil y su acceso a la app. Esta acción no se puede deshacer.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(false)}
+                          className="flex-1 h-10 rounded-xl border-2 border-border text-sm font-semibold text-foreground hover:bg-secondary transition-all"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={eliminarMiembro}
+                          disabled={deleting}
+                          className="flex-1 h-10 rounded-xl text-sm font-bold text-white transition-all active:scale-[0.97] disabled:opacity-50"
+                          style={{ background: "#ef4444" }}
+                        >
+                          {deleting ? "Eliminando…" : "Sí, eliminar"}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

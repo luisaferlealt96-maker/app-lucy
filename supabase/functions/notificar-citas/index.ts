@@ -430,6 +430,60 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ── RESUMEN SEMANAL: domingo → citas de la semana a Mamita Lucy ─────
+    if (tipo === "resumen_semanal") {
+      const hoy = new Date();
+      const fin = new Date(hoy);
+      fin.setDate(hoy.getDate() + 7);
+
+      const [{ data: citas }, { data: todosLos }] = await Promise.all([
+        sb.from("citas")
+          .select("*, acompanante:acompanante_id(*)")
+          .eq("estado", "pendiente")
+          .not("fecha_hora", "is", null)
+          .gte("fecha_hora", hoy.toISOString())
+          .lte("fecha_hora", fin.toISOString())
+          .order("fecha_hora"),
+        sb.from("miembros_familia").select("*").eq("activo", true),
+      ]);
+
+      const lucy = (todosLos ?? []).find((m: { rol: string }) => m.rol === "abuela");
+
+      if (!lucy?.telefono || !(citas ?? []).length) {
+        return new Response(
+          JSON.stringify({ ok: true, tipo, citasEncontradas: citas?.length ?? 0, enviados: 0 }),
+          { headers: { ...cors, "Content-Type": "application/json" } },
+        );
+      }
+
+      let enviados = 0;
+      for (const c of citas ?? []) {
+        const esp      = c.especialidad ?? "Consulta médica";
+        const fecha    = fechaLarga(c.fecha_hora);
+        const hora     = horaCorta(c.fecha_hora);
+        const lugar    = c.lugar ?? "por confirmar";
+        const lugarUrl = encodeURIComponent(lugar);
+        const acompNom = (c.acompanante as { nombre: string } | null)?.nombre ?? "sin asignar";
+
+        const ok = await enviarWA(lucy.telefono, "cita_lucy_recordatorio", [
+          { name: "nombre",       value: "Lucy" },
+          { name: "especialidad", value: esp },
+          { name: "fecha",        value: fecha },
+          { name: "hora",         value: hora },
+          { name: "lugar",        value: lugar },
+        ], lugarUrl);
+        if (ok) enviados++;
+
+        // pequeña pausa entre mensajes para no saturar la API
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, tipo, enviados }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
     return new Response(JSON.stringify({ error: "tipo no reconocido" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (err) {
     console.error(err);

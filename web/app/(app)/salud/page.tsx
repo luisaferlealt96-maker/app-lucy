@@ -6,7 +6,7 @@ import {
   Heart, Plus, Calendar, Pill, FlaskConical, Clock, Circle,
   Check, Package, MapPin, Mic, User, Activity, X, FileText,
   ChevronLeft, ChevronRight, LayoutGrid, Pencil, Search, ExternalLink, Shield,
-  ChevronDown,
+  ChevronDown, Download,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -1296,6 +1296,110 @@ function ExamenCard({ examen, index }: { examen: Examen; index: number }) {
 const DAYS_ES  = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
+function descargarSemanaImagen(weekDays: Date[], citaMap: Map<string, Cita[]>) {
+  const W = 1120, H = 640;
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  // Fondo
+  ctx.fillStyle = "#FAFAFA";
+  ctx.fillRect(0, 0, W, H);
+
+  // Header
+  ctx.fillStyle = "#F2C5CE";
+  ctx.fillRect(0, 0, W, 64);
+  ctx.fillStyle = "#C0546A";
+  ctx.font = "bold 22px system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("Lucy Familia", 24, 40);
+  const semLabel = `${weekDays[0].toLocaleDateString("es-CO",{day:"numeric",month:"long"})} – ${weekDays[6].toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"})}`;
+  ctx.fillStyle = "#9B6070";
+  ctx.font = "500 15px system-ui, sans-serif";
+  ctx.fillText(`Programación de la semana · ${semLabel}`, 24, 58);
+
+  const colW = (W - 32) / 7;
+  const DAYS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  weekDays.forEach((day, i) => {
+    const x = 16 + i * colW;
+    const isHoy = day.toDateString() === today.toDateString();
+
+    // Columna fondo
+    ctx.fillStyle = isHoy ? "#FDF2F4" : "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(x + 2, 72, colW - 4, H - 80, 12);
+    ctx.fill();
+    if (isHoy) {
+      ctx.strokeStyle = "#C0546A44";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Día header
+    ctx.fillStyle = isHoy ? "#C0546A" : "#888";
+    ctx.font = `bold 11px system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(DAYS[i], x + colW / 2, 92);
+    ctx.fillStyle = isHoy ? "#C0546A" : "#333";
+    ctx.font = `bold 18px system-ui, sans-serif`;
+    ctx.fillText(day.getDate().toString(), x + colW / 2, 114);
+
+    // Citas del día
+    const dayCitas = citaMap.get(day.toDateString()) ?? [];
+    dayCitas.forEach((c, ci) => {
+      const cy = 128 + ci * 76;
+      if (cy + 68 > H - 8) return;
+
+      // Chip
+      ctx.fillStyle = "#F2C5CE";
+      ctx.beginPath();
+      ctx.roundRect(x + 6, cy, colW - 12, 68, 8);
+      ctx.fill();
+
+      ctx.fillStyle = "#C0546A";
+      ctx.font = "bold 11px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      const esp = (c.especialidad ?? "Cita").slice(0, 18);
+      ctx.fillText(esp, x + 12, cy + 18);
+
+      if (c.fecha_hora) {
+        const hora = new Date(c.fecha_hora).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",timeZone:"America/Bogota"});
+        ctx.fillStyle = "#9B6070";
+        ctx.font = "500 10px system-ui, sans-serif";
+        ctx.fillText(hora, x + 12, cy + 34);
+      }
+      if (c.lugar) {
+        ctx.fillStyle = "#AA7080";
+        ctx.font = "10px system-ui, sans-serif";
+        const lugar = c.lugar.slice(0, 22);
+        ctx.fillText(lugar, x + 12, cy + 50);
+      }
+    });
+
+    if (dayCitas.length === 0) {
+      ctx.fillStyle = "#CCC";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("–", x + colW / 2, 148);
+    }
+  });
+
+  // Footer
+  ctx.fillStyle = "#EEE";
+  ctx.fillRect(0, H - 24, W, 24);
+  ctx.fillStyle = "#AAA";
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText("Lucy Familia · app-lucy.vercel.app", W - 16, H - 8);
+
+  const link = document.createElement("a");
+  link.download = `lucy-semana-${weekDays[0].toISOString().slice(0,10)}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
 function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref: string }) {
   const [calView, setCalView] = useState<"semana" | "mes">("semana");
   const [refDate, setRefDate] = useState(() => new Date());
@@ -1372,6 +1476,15 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
             className="ml-1 px-2.5 py-1 rounded-lg text-xs font-semibold border border-border hover:bg-gray-50 transition-colors text-muted-foreground">
             Hoy
           </button>
+          {calView === "semana" && (
+            <button
+              onClick={() => descargarSemanaImagen(weekDays, citaMap)}
+              title="Descargar imagen de la semana"
+              className="ml-1 w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Download size={14} />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: "#f3f4f6" }}>
           {(["semana","mes"] as const).map(v => (

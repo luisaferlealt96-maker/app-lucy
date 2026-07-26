@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const sanitize = (s: string) => s.replace(/[^\x20-\x7E]/g, "").trim();
+
 export async function POST(req: NextRequest) {
   const { email, nombre } = await req.json();
   if (!email) return NextResponse.json({ error: "Email requerido" }, { status: 400 });
 
-  const origin = req.headers.get("origin") ?? "http://localhost:3001";
+  const origin     = sanitize(req.headers.get("origin") ?? "https://app-lucy.vercel.app");
+  const supabaseUrl = sanitize(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  const serviceKey  = sanitize(process.env.SUPABASE_SECRET_KEY ?? "");
+
+  if (!supabaseUrl || !serviceKey) {
+    return NextResponse.json({ error: "Configuración incompleta" }, { status: 500 });
+  }
 
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/invitar-usuario`,
+    `${supabaseUrl}/functions/v1/invitar-usuario`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.SUPABASE_SECRET_KEY}`,
+        "Authorization": `Bearer ${serviceKey}`,
       },
       body: JSON.stringify({ email, nombre, redirectTo: `${origin}/auth/callback` }),
     }

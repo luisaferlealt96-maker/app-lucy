@@ -53,13 +53,17 @@ export default function AuthCallbackPage() {
           const params = new URLSearchParams(hash.substring(1));
           const access_token = params.get("access_token") ?? "";
           const refresh_token = params.get("refresh_token") ?? "";
-
-          setDebug(`access_token: ${access_token.substring(0, 20)}... refresh: ${refresh_token.substring(0, 10)}...`);
+          const type = params.get("type") ?? "";
 
           const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
           setDebug(`setSession result: error=${error?.message ?? "none"} session=${data.session ? "ok" : "null"}`);
 
           if (!error && data.session) {
+            if (type === "recovery") {
+              setDebug("Flujo de recuperación, redirigiendo a cambiar contraseña...");
+              window.location.href = "/reset-password";
+              return;
+            }
             await ir(data.session.user.id, data.session.user.email);
             return;
           }
@@ -68,10 +72,17 @@ export default function AuthCallbackPage() {
 
         // Intento 2: code en la query string (flujo PKCE)
         const code = new URLSearchParams(window.location.search).get("code");
+        const isReset = localStorage.getItem("__password_reset") === "1";
         if (code) {
           setDebug("Encontré code en la URL, intercambiando...");
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (!error && data.session) {
+            if (isReset) {
+              localStorage.removeItem("__password_reset");
+              setDebug("Flujo de recuperación (PKCE), redirigiendo a cambiar contraseña...");
+              window.location.href = "/reset-password";
+              return;
+            }
             await ir(data.session.user.id, data.session.user.email);
             return;
           }
