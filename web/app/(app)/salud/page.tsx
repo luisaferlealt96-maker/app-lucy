@@ -685,7 +685,7 @@ function KanbanBoardView({
 
         {/* Columns / Calendar */}
         {activeBoard === "citas" && citasView === "calendario" && (
-          <CalendarioView citas={citas} nuevaCitaHref={nuevaCitaHref} />
+          <CalendarioView citas={citas} examenes={examenes} medicamentos={medicamentos} nuevaCitaHref={nuevaCitaHref} />
         )}
         {!(activeBoard === "citas" && citasView === "calendario") && (
         <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0" style={{ scrollbarWidth: "thin", alignItems: "flex-start" }}>
@@ -1296,7 +1296,23 @@ function ExamenCard({ examen, index }: { examen: Examen; index: number }) {
 const DAYS_ES  = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-function descargarSemanaImagen(weekDays: Date[], citaMap: Map<string, Cita[]>) {
+type CalEvent = {
+  kind: "cita" | "examen" | "entrega";
+  id: string; title: string; href: string;
+  time?: string; sub?: string;
+};
+
+const EV_STYLE = {
+  cita:    { bg: "#FDF2F4", border: "#C0546A", text: "#C0546A" },
+  examen:  { bg: "#EDE9F7", border: "#9B8EC4", text: "#9B8EC4" },
+  entrega: { bg: "#D1FAE5", border: "#2E7D6A", text: "#2E7D6A" },
+};
+
+function dateKey(dateStr: string) {
+  return new Date(dateStr + "T12:00:00").toDateString();
+}
+
+function descargarSemanaImagen(weekDays: Date[], eventMap: Map<string, CalEvent[]>) {
   const W = 1120, H = 640;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
@@ -1346,39 +1362,39 @@ function descargarSemanaImagen(weekDays: Date[], citaMap: Map<string, Cita[]>) {
     ctx.font = `bold 18px system-ui, sans-serif`;
     ctx.fillText(day.getDate().toString(), x + colW / 2, 114);
 
-    // Citas del día
-    const dayCitas = citaMap.get(day.toDateString()) ?? [];
-    dayCitas.forEach((c, ci) => {
+    // Eventos del día
+    const dayEvents = eventMap.get(day.toDateString()) ?? [];
+    dayEvents.forEach((ev, ci) => {
       const cy = 128 + ci * 76;
       if (cy + 68 > H - 8) return;
+      const st = EV_STYLE[ev.kind];
 
-      // Chip
-      ctx.fillStyle = "#F2C5CE";
+      ctx.fillStyle = st.bg;
       ctx.beginPath();
       ctx.roundRect(x + 6, cy, colW - 12, 68, 8);
       ctx.fill();
+      ctx.strokeStyle = st.border + "88";
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      ctx.fillStyle = "#C0546A";
+      ctx.fillStyle = st.text;
       ctx.font = "bold 11px system-ui, sans-serif";
       ctx.textAlign = "left";
-      const esp = (c.especialidad ?? "Cita").slice(0, 18);
-      ctx.fillText(esp, x + 12, cy + 18);
+      ctx.fillText(ev.title.slice(0, 18), x + 12, cy + 18);
 
-      if (c.fecha_hora) {
-        const hora = new Date(c.fecha_hora).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",timeZone:"America/Bogota"});
-        ctx.fillStyle = "#9B6070";
+      if (ev.time) {
+        ctx.fillStyle = st.text + "BB";
         ctx.font = "500 10px system-ui, sans-serif";
-        ctx.fillText(hora, x + 12, cy + 34);
+        ctx.fillText(ev.time, x + 12, cy + 34);
       }
-      if (c.lugar) {
-        ctx.fillStyle = "#AA7080";
+      if ("sub" in ev && ev.sub) {
+        ctx.fillStyle = st.text + "88";
         ctx.font = "10px system-ui, sans-serif";
-        const lugar = c.lugar.slice(0, 22);
-        ctx.fillText(lugar, x + 12, cy + 50);
+        ctx.fillText(ev.sub.slice(0, 22), x + 12, cy + 50);
       }
     });
 
-    if (dayCitas.length === 0) {
+    if (dayEvents.length === 0) {
       ctx.fillStyle = "#CCC";
       ctx.font = "12px system-ui, sans-serif";
       ctx.textAlign = "center";
@@ -1400,7 +1416,9 @@ function descargarSemanaImagen(weekDays: Date[], citaMap: Map<string, Cita[]>) {
   link.click();
 }
 
-function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref: string }) {
+function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
+  citas: Cita[]; examenes: Examen[]; medicamentos: Medicamento[]; nuevaCitaHref: string;
+}) {
   const [calView, setCalView] = useState<"semana" | "mes">("semana");
   const [refDate, setRefDate] = useState(() => new Date());
 
@@ -1431,18 +1449,42 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
     return cells;
   }, [year, month]);
 
-  const citaMap = useMemo(() => {
-    const map = new Map<string, Cita[]>();
+  const eventMap = useMemo(() => {
+    const map = new Map<string, CalEvent[]>();
+    const add = (key: string, ev: CalEvent) => {
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ev);
+    };
     citas.filter(c => c.fecha_hora).forEach(c => {
       const key = new Date(c.fecha_hora!).toDateString();
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(c);
+      add(key, {
+        kind: "cita", id: c.id, href: `/salud/cita/${c.id}`,
+        title: c.especialidad,
+        time: new Date(c.fecha_hora!).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
+        sub: c.lugar ?? undefined,
+      });
+    });
+    examenes.filter(e => e.fecha_solicitud && e.estado !== "listo").forEach(e => {
+      add(dateKey(e.fecha_solicitud!), {
+        kind: "examen", id: e.id, href: `/salud/examen/${e.id}`,
+        title: e.nombre,
+        time: e.hora ? (() => { const [h,m] = e.hora!.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? "p.m." : "a.m."}`; })() : undefined,
+        sub: e.lugar ?? undefined,
+      });
+    });
+    medicamentos.filter(m => m.activo).forEach(m => {
+      (m.entregas_medicamento ?? []).filter(e => e.fecha_programada && e.estado === "pendiente").forEach(e => {
+        add(dateKey(e.fecha_programada!), {
+          kind: "entrega", id: e.id, href: `/salud/medicamento/${m.id}`,
+          title: `Entrega ${e.numero_entrega} · ${m.nombre}`,
+        });
+      });
     });
     return map;
-  }, [citas]);
+  }, [citas, examenes, medicamentos]);
 
-  const getCitas = (d: Date) => citaMap.get(d.toDateString()) ?? [];
-  const isToday  = (d: Date) => d.toDateString() === today.toDateString();
+  const getEvents = (d: Date) => eventMap.get(d.toDateString()) ?? [];
+  const isToday   = (d: Date) => d.toDateString() === today.toDateString();
 
   const prev = () => {
     const d = new Date(refDate);
@@ -1457,6 +1499,12 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
 
   const sinFecha = citas.filter(c => !c.fecha_hora);
   const weekLabel = `${weekDays[0].toLocaleDateString("es-CO",{day:"numeric",month:"short"})} – ${weekDays[6].toLocaleDateString("es-CO",{day:"numeric",month:"short",year:"numeric"})}`;
+
+  const legendItems: { label: string; bg: string; color: string }[] = [
+    { label: "Cita", bg: EV_STYLE.cita.bg, color: EV_STYLE.cita.text },
+    { label: "Procedimiento", bg: EV_STYLE.examen.bg, color: EV_STYLE.examen.text },
+    { label: "Entrega med.", bg: EV_STYLE.entrega.bg, color: EV_STYLE.entrega.text },
+  ];
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
@@ -1478,7 +1526,7 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
           </button>
           {calView === "semana" && (
             <button
-              onClick={() => descargarSemanaImagen(weekDays, citaMap)}
+              onClick={() => descargarSemanaImagen(weekDays, eventMap)}
               title="Descargar imagen de la semana"
               className="ml-1 w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
             >
@@ -1499,6 +1547,16 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
         </div>
       </div>
 
+      {/* Leyenda */}
+      <div className="px-4 py-1.5 flex items-center gap-3 shrink-0 border-b border-black/5">
+        {legendItems.map(l => (
+          <div key={l.label} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: l.bg, border: `1.5px solid ${l.color}` }} />
+            <span className="text-[10px] font-semibold" style={{ color: l.color }}>{l.label}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Sin fecha banner */}
       {sinFecha.length > 0 && (
         <div className="px-5 py-2 flex items-center gap-2 shrink-0 border-b" style={{ background: "#FFF3E0", borderColor: "#FFE0B2" }}>
@@ -1514,7 +1572,7 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
       {calView === "semana" && (
         <div className="flex flex-1 min-h-0 overflow-hidden divide-x divide-black/5">
           {weekDays.map((day, i) => {
-            const dayCitas = getCitas(day);
+            const dayEvents = getEvents(day);
             const hoy = isToday(day);
             return (
               <div key={i} className="flex-1 flex flex-col min-w-0">
@@ -1530,26 +1588,23 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-1.5 flex flex-col gap-1.5" style={{ scrollbarWidth: "thin" }}>
-                  {dayCitas.map(c => {
-                    const hora = c.fecha_hora
-                      ? new Date(c.fecha_hora).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})
-                      : null;
+                  {dayEvents.map(ev => {
+                    const st = EV_STYLE[ev.kind];
                     return (
-                      <Link key={c.id} href={`/salud/cita/${c.id}`}>
+                      <Link key={`${ev.kind}-${ev.id}`} href={ev.href}>
                         <div className="rounded-lg px-2 py-1.5 border-l-2 hover:opacity-90 transition-opacity"
-                          style={{ background: "#FDF2F4", borderLeftColor: "#C0546A" }}>
-                          <p className="text-[11px] font-bold text-foreground leading-tight line-clamp-2">{c.especialidad}</p>
-                          {c.medico && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{c.medico}</p>}
-                          {hora && (
+                          style={{ background: st.bg, borderLeftColor: st.border }}>
+                          <p className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: st.text }}>{ev.title}</p>
+                          {ev.time && (
                             <div className="flex items-center gap-1 mt-1">
-                              <Clock size={9} color="#C0546A" />
-                              <span className="text-[10px] font-semibold" style={{ color: "#C0546A" }}>{hora}</span>
+                              <Clock size={9} style={{ color: st.border }} />
+                              <span className="text-[10px] font-semibold" style={{ color: st.text }}>{ev.time}</span>
                             </div>
                           )}
-                          {c.lugar && (
+                          {"sub" in ev && ev.sub && (
                             <div className="flex items-center gap-1 mt-0.5">
                               <MapPin size={9} className="text-muted-foreground" />
-                              <span className="text-[10px] text-muted-foreground truncate">{c.lugar}</span>
+                              <span className="text-[10px] text-muted-foreground truncate">{ev.sub}</span>
                             </div>
                           )}
                         </div>
@@ -1574,7 +1629,7 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
           <div className="grid grid-cols-7 gap-1">
             {monthGrid.map((date, i) => {
               if (!date) return <div key={`e-${i}`} className="min-h-[68px]" />;
-              const dayCitas = getCitas(date);
+              const dayEvents = getEvents(date);
               const hoy = isToday(date);
               const currentM = date.getMonth() === month;
               return (
@@ -1586,16 +1641,19 @@ function CalendarioView({ citas, nuevaCitaHref }: { citas: Cita[]; nuevaCitaHref
                     {date.getDate()}
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    {dayCitas.slice(0, 2).map(c => (
-                      <Link key={c.id} href={`/salud/cita/${c.id}`}>
-                        <div className="rounded px-1.5 py-0.5 text-[10px] font-semibold truncate hover:opacity-80 transition-opacity"
-                          style={{ background: "#F2C5CE", color: "#C0546A" }}>
-                          {c.especialidad}
-                        </div>
-                      </Link>
-                    ))}
-                    {dayCitas.length > 2 && (
-                      <span className="text-[10px] text-muted-foreground font-semibold pl-1">+{dayCitas.length - 2}</span>
+                    {dayEvents.slice(0, 2).map(ev => {
+                      const st = EV_STYLE[ev.kind];
+                      return (
+                        <Link key={`${ev.kind}-${ev.id}`} href={ev.href}>
+                          <div className="rounded px-1.5 py-0.5 text-[10px] font-semibold truncate hover:opacity-80 transition-opacity"
+                            style={{ background: st.bg, color: st.text }}>
+                            {ev.title}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                    {dayEvents.length > 2 && (
+                      <span className="text-[10px] text-muted-foreground font-semibold pl-1">+{dayEvents.length - 2}</span>
                     )}
                   </div>
                 </div>
