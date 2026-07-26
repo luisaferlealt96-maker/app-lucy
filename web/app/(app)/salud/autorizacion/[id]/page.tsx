@@ -127,7 +127,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
   const estadoConf = auth ? ESTADO_CONFIG[auth.estado] : null;
 
   return (
-    <div className="min-h-dvh bg-background pb-10 max-w-md mx-auto">
+    <div className="min-h-dvh bg-background pb-32 max-w-md mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}

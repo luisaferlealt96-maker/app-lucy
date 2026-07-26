@@ -163,7 +163,7 @@ function NuevoExamenContent() {
   const venc = authForm.fecha_orden ? vencimientoTexto(authForm.fecha_orden) : null;
 
   return (
-    <div className="min-h-dvh bg-background pb-10 max-w-md mx-auto">
+    <div className="min-h-dvh bg-background pb-32 max-w-md mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}

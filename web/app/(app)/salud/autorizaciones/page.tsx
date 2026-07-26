@@ -126,7 +126,7 @@ export default function AutorizacionesPage() {
   const pendientes = grupos.sin_gestionar.length + grupos.en_tramite.length;
 
   return (
-    <div className="min-h-dvh bg-background pb-10">
+    <div className="min-h-dvh bg-background pb-32">
 
       {/* ─── Header ─── */}
       <motion.div
