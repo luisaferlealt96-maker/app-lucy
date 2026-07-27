@@ -603,7 +603,7 @@ function NuevaCitaContent() {
                 ))}
               </div>
 
-              <div className={`overflow-hidden transition-all duration-300 ${authForm.estado === "en_tramite" ? "max-h-28 opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}>
+              <div className={`overflow-hidden transition-all duration-300 -mx-1 px-1 ${authForm.estado === "en_tramite" ? "max-h-28 opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}>
                 <div className="flex flex-col gap-1.5 pt-1">
                   <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
                   <Input
