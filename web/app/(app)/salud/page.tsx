@@ -1014,21 +1014,29 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
 }) {
   const entregas = med.entregas_medicamento ?? [];
   const reclamadas = entregas.filter(e => e.estado === "reclamada").length;
+  const porReclamar = med.activo && reclamadas === 0;
+  const proxima = entregas.find(e => e.estado === "pendiente" && e.fecha_programada);
+  const dotColor = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#22c55e";
+  const topBar  = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#2E7D6A";
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
       <div className="rounded-xl border border-black/6 bg-white overflow-hidden hover:shadow-md transition-all">
-        <div className="h-1 w-full" style={{ background: med.activo ? "#2E7D6A" : "#9ca3af" }} />
+        <div className="h-1 w-full" style={{ background: topBar }} />
         <div className="p-3.5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-1.5">
-              <Circle size={7} fill={med.activo ? "#22c55e" : "#9ca3af"} color={med.activo ? "#22c55e" : "#9ca3af"} className="shrink-0 mt-0.5" />
+              <Circle size={7} fill={dotColor} color={dotColor} className="shrink-0 mt-0.5" />
               <p className="font-bold text-sm text-foreground leading-tight">{med.nombre}</p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {med.archivo_url && <FileText size={11} color="#2E7D6A" />}
-              <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
-                med.activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500")}>
-                {med.activo ? "Activo" : "Inactivo"}
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={!med.activo
+                  ? { background: "#f3f4f6", color: "#6b7280" }
+                  : porReclamar
+                  ? { background: "#FFF3E0", color: "#e65100" }
+                  : { background: "#f0fdf4", color: "#15803d" }}>
+                {!med.activo ? "Inactivo" : porReclamar ? "Por reclamar" : "Activo"}
               </span>
               <Link href={`/salud/medicamento/${med.id}`}
                 onClick={e => e.stopPropagation()}
@@ -1039,6 +1047,11 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
           </div>
           {med.dosis && <p className="text-xs text-muted-foreground mt-0.5 ml-3.5">{med.dosis}</p>}
           {med.frecuencia && <p className="text-xs text-muted-foreground ml-3.5">{med.frecuencia}</p>}
+          {proxima && !reclamadas && (
+            <p className="text-[11px] font-semibold ml-3.5 mt-1" style={{ color: "#e65100" }}>
+              Entrega {proxima.numero_entrega}: {formatFechaCorta(proxima.fecha_programada!)}
+            </p>
+          )}
           {med.horas_toma && med.horas_toma.length > 0 && (
             <div className="flex gap-1.5 mt-2 ml-3.5 flex-wrap">
               {med.horas_toma.map(h => (
@@ -1142,22 +1155,34 @@ function MobileMedsList({ medicamentos, medsActivos, loading, nuevoMedHref, marc
           {medicamentos.map((med, i) => {
             const entregas = med.entregas_medicamento ?? [];
             const reclamadas = entregas.filter(e => e.estado === "reclamada").length;
+            const porReclamar = med.activo && reclamadas === 0;
+            const proxima = entregas.find(e => e.estado === "pendiente" && e.fecha_programada);
+            const dotColor = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#22c55e";
             return (
               <motion.div key={med.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <div className="bg-card rounded-2xl p-4 border border-border shadow-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Circle size={8} fill={med.activo ? "#22c55e" : "#9ca3af"} color={med.activo ? "#22c55e" : "#9ca3af"} />
+                      <Circle size={8} fill={dotColor} color={dotColor} />
                       <div>
                         <p className="font-bold text-sm">{med.nombre}</p>
                         {med.dosis && <p className="text-xs text-muted-foreground">{med.dosis}</p>}
                       </div>
                     </div>
-                    <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0",
-                      med.activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500")}>
-                      {med.activo ? "Activo" : "Inactivo"}
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                      style={!med.activo
+                        ? { background: "#f3f4f6", color: "#6b7280" }
+                        : porReclamar
+                        ? { background: "#FFF3E0", color: "#e65100" }
+                        : { background: "#f0fdf4", color: "#15803d" }}>
+                      {!med.activo ? "Inactivo" : porReclamar ? "Por reclamar" : "Activo"}
                     </span>
                   </div>
+                  {proxima && !reclamadas && (
+                    <p className="text-[11px] font-semibold ml-4 mt-1" style={{ color: "#e65100" }}>
+                      Entrega {proxima.numero_entrega}: {formatFechaCorta(proxima.fecha_programada!)}
+                    </p>
+                  )}
                   {med.frecuencia && <p className="text-xs text-muted-foreground mt-1.5 ml-4">{med.frecuencia}</p>}
                   {med.horas_toma && med.horas_toma.length > 0 && (
                     <div className="flex gap-1.5 mt-2 ml-4 flex-wrap">

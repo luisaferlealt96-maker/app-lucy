@@ -33,11 +33,26 @@ export default function LoginPage() {
         return;
       }
 
-      const { data: miembro } = await supabase
+      let { data: miembro } = await supabase
         .from("miembros_familia")
-        .select("rol")
+        .select("id, rol")
         .eq("user_id", data.user.id)
         .maybeSingle();
+
+      // Si no tiene user_id vinculado aún, buscarlo por email y vincularlo
+      if (!miembro && email) {
+        const { data: porEmail } = await supabase
+          .from("miembros_familia")
+          .select("id, rol")
+          .eq("email", email)
+          .maybeSingle();
+        if (porEmail) {
+          await supabase.from("miembros_familia")
+            .update({ user_id: data.user.id })
+            .eq("id", porEmail.id);
+          miembro = porEmail;
+        }
+      }
 
       const dest = miembro?.rol === "abuela" ? "/abuela" : "/inicio";
       window.location.href = dest;

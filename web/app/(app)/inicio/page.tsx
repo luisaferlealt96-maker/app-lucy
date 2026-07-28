@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Heart, Wallet, Building2, ChevronRight, Calendar, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useMiembros, useCitasProximas } from "@/hooks/useSalud";
 import { Skeleton } from "@/components/ui/skeleton";
+import { createClient } from "@/lib/supabase/client";
 
 const ROL_LABEL: Record<string, string> = {
   admin:    "Administradora",
@@ -16,13 +18,21 @@ const ROL_LABEL: Record<string, string> = {
 export default function InicioPage() {
   const { citas, loading: citasLoading } = useCitasProximas(4);
   const { miembros, loading: miembrosLoading } = useMiembros();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null);
+    });
+  }, []);
 
   const today = new Date().toLocaleDateString("es-CO", {
     weekday: "long", day: "numeric", month: "long",
   });
   const todayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
 
-  const salud = miembros.find(m => m.rol === "admin");
+  const yo = miembros.find(m => m.user_id === currentUserId);
+  const salud = yo ?? miembros.find(m => m.rol === "admin");
   const saludStat = citasLoading ? "…" : `${citas.length} cita${citas.length !== 1 ? "s" : ""} próxima${citas.length !== 1 ? "s" : ""}`;
 
   const pillars = [
