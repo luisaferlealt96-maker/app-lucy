@@ -47,6 +47,8 @@ export default function SaludPage() {
   const citasAgendadas        = citas.filter(c => c.estado === "pendiente");
   const citasActivas          = citas.filter(c => c.estado !== "completada" && c.estado !== "cancelada");
   const medsActivos           = medicamentos.filter(m => m.activo);
+  const medsPorReclamar       = medsActivos.filter(m => (m.entregas_medicamento ?? []).every(e => e.estado !== "reclamada"));
+  const medsConEntregas       = medsActivos.filter(m => (m.entregas_medicamento ?? []).some(e => e.estado === "reclamada"));
 
   const nuevaCitaHref  = `/salud/nueva-cita${abuelaId ? `?paciente=${abuelaId}` : ""}`;
   const nuevoMedHref   = `/salud/nuevo-medicamento${abuelaId ? `?paciente=${abuelaId}` : ""}`;
@@ -194,7 +196,7 @@ export default function SaludPage() {
               <MobileCitasList citas={citas} loading={loading} nuevaCitaHref={nuevaCitaHref} />
             </TabsContent>
             <TabsContent value="medicamentos">
-              <MobileMedsList medicamentos={medicamentos} medsActivos={medsActivos} loading={loading} nuevoMedHref={nuevoMedHref} marcarEntregaReclamada={marcarEntregaReclamada} />
+              <MobileMedsList medicamentos={medicamentos} medsPorReclamar={medsPorReclamar} medsConEntregas={medsConEntregas} loading={loading} nuevoMedHref={nuevoMedHref} marcarEntregaReclamada={marcarEntregaReclamada} />
             </TabsContent>
             <TabsContent value="examenes">
               <div className="flex items-center justify-between mb-3">
@@ -335,6 +337,8 @@ export default function SaludPage() {
             citasAgendadas={citasAgendadas}
             medicamentos={medicamentos}
             medsActivos={medsActivos}
+            medsPorReclamar={medsPorReclamar}
+            medsConEntregas={medsConEntregas}
             examenes={examenes}
             autorizaciones={autorizaciones}
             loadingAuth={loadingAuth}
@@ -461,14 +465,14 @@ function diasRestantesAuth(fechaOrden: string): number {
 
 function KanbanBoardView({
   citas, citasPendienteAgendar, citasAgendadas,
-  medicamentos, medsActivos, examenes,
+  medicamentos, medsActivos, medsPorReclamar, medsConEntregas, examenes,
   autorizaciones, loadingAuth, setAutorizaciones,
   loading, refresh,
   nuevaCitaHref, nuevoMedHref, nuevoExHref, nuevoAuthHref,
   marcarEntregaReclamada,
 }: {
   citas: Cita[]; citasPendienteAgendar: Cita[]; citasAgendadas: Cita[];
-  medicamentos: Medicamento[]; medsActivos: Medicamento[]; examenes: Examen[];
+  medicamentos: Medicamento[]; medsActivos: Medicamento[]; medsPorReclamar: Medicamento[]; medsConEntregas: Medicamento[]; examenes: Examen[];
   autorizaciones: AutorizacionEPS[]; loadingAuth: boolean;
   setAutorizaciones: React.Dispatch<React.SetStateAction<AutorizacionEPS[]>>;
   loading: boolean; refresh: () => void;
@@ -526,12 +530,14 @@ function KanbanBoardView({
     }
 
     if (type === "med") {
-      if (fromCol === "meds-activos" && toCol === "meds-inactivos") {
+      const toInactivo = toCol === "meds-inactivos";
+      const fromInactivo = fromCol === "meds-inactivos";
+      if (!fromInactivo && toInactivo) {
         await supabase.from("medicamentos").update({ activo: false }).eq("id", itemId);
         refresh();
         return;
       }
-      if (fromCol === "meds-inactivos" && toCol === "meds-activos") {
+      if (fromInactivo && !toInactivo) {
         await supabase.from("medicamentos").update({ activo: true }).eq("id", itemId);
         refresh();
         return;
@@ -582,7 +588,7 @@ function KanbanBoardView({
 
   const boards = [
     { id: "citas"           as const, label: "Citas",           icon: Calendar,     count: citas.length,                                               accent: "#C0546A", bg: "#F2C5CE" },
-    { id: "medicamentos"    as const, label: "Medicamentos",    icon: Pill,         count: medsActivos.length,                                         accent: "#2E7D6A", bg: "#B8E2D4" },
+    { id: "medicamentos"    as const, label: "Medicamentos",    icon: Pill,         count: medsPorReclamar.length + medsConEntregas.length,            accent: "#2E7D6A", bg: "#B8E2D4" },
     { id: "examenes"        as const, label: "Procedimientos",  icon: FlaskConical, count: examenes.length,                                            accent: "#9B8EC4", bg: "#EDE9F7" },
     { id: "autorizaciones"  as const, label: "Autorizaciones",  icon: Shield,       count: autorizaciones.filter(a => a.estado !== "autorizada").length, accent: "#C0546A", bg: "#F2C5CE" },
   ];
@@ -717,8 +723,25 @@ function KanbanBoardView({
 
           {activeBoard === "medicamentos" && (
             <>
-              <KanbanColumn droppableId="meds-activos" title="Activos" color="#2E7D6A" bg="#B8E2D4" count={medsActivos.length} addHref={nuevoMedHref} loading={loading}>
-                {medsActivos.map((m, i) => (
+              <KanbanColumn droppableId="meds-por-reclamar" title="Por reclamar" color="#e65100" bg="#FFF3E0" count={medsPorReclamar.length} addHref={nuevoMedHref} loading={loading}>
+                {medsPorReclamar.length === 0 ? (
+                  <div className="rounded-xl p-5 text-center border border-dashed mt-1"
+                    style={{ borderColor: "#e6510055", background: "white" }}>
+                    <p className="text-xs text-muted-foreground">Medicamentos recién registrados aparecen aquí</p>
+                  </div>
+                ) : medsPorReclamar.map((m, i) => (
+                  <DraggableCard key={m.id} id={`med:${m.id}:meds-por-reclamar`}>
+                    <MedicamentoCard med={m} index={i} marcarEntregaReclamada={marcarEntregaReclamada} />
+                  </DraggableCard>
+                ))}
+              </KanbanColumn>
+              <KanbanColumn droppableId="meds-activos" title="Activos" color="#2E7D6A" bg="#B8E2D4" count={medsConEntregas.length} addHref={nuevoMedHref} loading={loading} noAdd>
+                {medsConEntregas.length === 0 ? (
+                  <div className="rounded-xl p-5 text-center border border-dashed mt-1"
+                    style={{ borderColor: "#2E7D6A55", background: "white" }}>
+                    <p className="text-xs text-muted-foreground">Cuando reclames la primera entrega, el medicamento pasa aquí</p>
+                  </div>
+                ) : medsConEntregas.map((m, i) => (
                   <DraggableCard key={m.id} id={`med:${m.id}:meds-activos`}>
                     <MedicamentoCard med={m} index={i} marcarEntregaReclamada={marcarEntregaReclamada} />
                   </DraggableCard>
@@ -1136,14 +1159,15 @@ function MobileCitasList({ citas, loading, nuevaCitaHref }: { citas: Cita[]; loa
   );
 }
 
-function MobileMedsList({ medicamentos, medsActivos, loading, nuevoMedHref, marcarEntregaReclamada }: {
-  medicamentos: Medicamento[]; medsActivos: Medicamento[]; loading: boolean; nuevoMedHref: string;
+function MobileMedsList({ medicamentos, medsPorReclamar, medsConEntregas, loading, nuevoMedHref, marcarEntregaReclamada }: {
+  medicamentos: Medicamento[]; medsPorReclamar: Medicamento[]; medsConEntregas: Medicamento[]; loading: boolean; nuevoMedHref: string;
   marcarEntregaReclamada: (id: string) => void;
 }) {
+  const totalActivos = medsPorReclamar.length + medsConEntregas.length;
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground">{loading ? "…" : `${medsActivos.length} activo${medsActivos.length !== 1 ? "s" : ""}`}</p>
+        <p className="text-xs text-muted-foreground">{loading ? "…" : `${totalActivos} medicamento${totalActivos !== 1 ? "s" : ""}`}</p>
         <Link href={nuevoMedHref} className="flex items-center gap-1 text-xs font-semibold text-primary"><Plus size={13} />Agregar</Link>
       </div>
       {loading ? (
