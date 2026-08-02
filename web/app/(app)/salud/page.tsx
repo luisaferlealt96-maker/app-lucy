@@ -45,6 +45,7 @@ export default function SaludPage() {
 
   const citasPendienteAgendar = citas.filter(c => c.estado === "por_agendar");
   const citasAgendadas        = citas.filter(c => c.estado === "pendiente");
+  const citasCompletadas      = citas.filter(c => c.estado === "completada");
   const citasActivas          = citas.filter(c => c.estado !== "completada" && c.estado !== "cancelada");
   const medsActivos           = medicamentos.filter(m => m.activo);
   const medsPorReclamar       = medsActivos.filter(m => (m.entregas_medicamento ?? []).every(e => e.estado !== "reclamada"));
@@ -335,6 +336,7 @@ export default function SaludPage() {
             citas={citas}
             citasPendienteAgendar={citasPendienteAgendar}
             citasAgendadas={citasAgendadas}
+            citasCompletadas={citasCompletadas}
             medicamentos={medicamentos}
             medsActivos={medsActivos}
             medsPorReclamar={medsPorReclamar}
@@ -464,14 +466,14 @@ function diasRestantesAuth(fechaOrden: string): number {
 }
 
 function KanbanBoardView({
-  citas, citasPendienteAgendar, citasAgendadas,
+  citas, citasPendienteAgendar, citasAgendadas, citasCompletadas,
   medicamentos, medsActivos, medsPorReclamar, medsConEntregas, examenes,
   autorizaciones, loadingAuth, setAutorizaciones,
   loading, refresh,
   nuevaCitaHref, nuevoMedHref, nuevoExHref, nuevoAuthHref,
   marcarEntregaReclamada,
 }: {
-  citas: Cita[]; citasPendienteAgendar: Cita[]; citasAgendadas: Cita[];
+  citas: Cita[]; citasPendienteAgendar: Cita[]; citasAgendadas: Cita[]; citasCompletadas: Cita[];
   medicamentos: Medicamento[]; medsActivos: Medicamento[]; medsPorReclamar: Medicamento[]; medsConEntregas: Medicamento[]; examenes: Examen[];
   autorizaciones: AutorizacionEPS[]; loadingAuth: boolean;
   setAutorizaciones: React.Dispatch<React.SetStateAction<AutorizacionEPS[]>>;
@@ -507,6 +509,11 @@ function KanbanBoardView({
     if (type === "cita") {
       if (fromCol === "citas-por_agendar" && toCol === "citas-proximas") {
         setPendingMove({ type: "cita", id: itemId, targetCol: toCol });
+        return;
+      }
+      if (fromCol === "citas-proximas" && toCol === "citas-por_agendar") {
+        await supabase.from("citas").update({ estado: "por_agendar", fecha_hora: null }).eq("id", itemId);
+        refresh();
         return;
       }
       if (fromCol === "citas-proximas" && toCol === "citas-completadas") {
@@ -630,6 +637,7 @@ function KanbanBoardView({
       sensors={sensors}
       onDragStart={e => setActiveId(e.active.id as string)}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
     >
       <div className="flex flex-col gap-4 h-full">
 
@@ -712,11 +720,17 @@ function KanbanBoardView({
                   </DraggableCard>
                 ))}
               </KanbanColumn>
-              <KanbanColumn droppableId="citas-completadas" title="Completadas" color="#16a34a" bg="#dcfce7" count={0} addHref={nuevaCitaHref} loading={loading} noAdd>
-                <div className="rounded-xl p-5 text-center border border-dashed mt-1"
-                  style={{ borderColor: "#16a34a55", background: "white" }}>
-                  <p className="text-xs text-muted-foreground">Arrastra aquí para completar</p>
-                </div>
+              <KanbanColumn droppableId="citas-completadas" title="Completadas" color="#16a34a" bg="#dcfce7" count={citasCompletadas.length} addHref={nuevaCitaHref} loading={loading} noAdd>
+                {citasCompletadas.length === 0 ? (
+                  <div className="rounded-xl p-5 text-center border border-dashed mt-1"
+                    style={{ borderColor: "#16a34a55", background: "white" }}>
+                    <p className="text-xs text-muted-foreground">Arrastra aquí para completar</p>
+                  </div>
+                ) : citasCompletadas.map((c, i) => (
+                  <DraggableCard key={c.id} id={`cita:${c.id}:citas-completadas`}>
+                    <CitaCard cita={c} index={i} authVinculada={autorizaciones.find(a => a.cita_id === c.id && a.estado === "autorizada" && !!a.numero_autorizacion)} />
+                  </DraggableCard>
+                ))}
               </KanbanColumn>
             </>
           )}
@@ -899,11 +913,12 @@ function KanbanBoardView({
 
 function DraggableCard({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+  // Don't transform the ghost — DragOverlay handles the moving visual
+  const style = (!isDragging && transform) ? { transform: CSS.Translate.toString(transform) } : undefined;
   return (
     <div
       ref={setNodeRef}
-      style={{ ...style, opacity: isDragging ? 0.35 : 1 }}
+      style={{ ...style, opacity: isDragging ? 0.3 : 1 }}
       className="touch-none"
       {...listeners}
       {...attributes}
@@ -923,10 +938,11 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="w-[280px] shrink-0 flex flex-col rounded-2xl border border-black/5 overflow-hidden transition-all"
+      className="w-[280px] shrink-0 flex flex-col rounded-2xl overflow-hidden"
       style={{
-        background: bg + "55",
-        boxShadow: isOver ? `0 0 0 2px ${color}` : undefined,
+        background: isOver ? bg + "CC" : bg + "55",
+        border: isOver ? `2px dashed ${color}66` : "1px solid rgba(0,0,0,0.05)",
+        transition: "background 150ms ease, border 150ms ease",
       }}
     >
       <div className="flex items-center justify-between px-3.5 py-3 border-b" style={{ borderColor: color + "22" }}>

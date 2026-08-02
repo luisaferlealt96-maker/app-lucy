@@ -117,9 +117,9 @@ export function useAbuelaData() {
         .from("citas")
         .select("*, paciente:paciente_id(*), acompanante:acompanante_id(*)")
         .eq("paciente_id", abuelaData.id)
-        .or("estado.eq.por_agendar,estado.eq.pendiente")
+        .or("estado.eq.por_agendar,estado.eq.pendiente,estado.eq.completada")
         .order("fecha_hora", { ascending: true, nullsFirst: true })
-        .limit(30),
+        .limit(40),
       supabase
         .from("medicamentos")
         .select("*, entregas_medicamento(*)")
