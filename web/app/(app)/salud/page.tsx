@@ -508,7 +508,8 @@ function KanbanBoardView({
 
     if (type === "cita") {
       if (fromCol === "citas-por_agendar" && toCol === "citas-proximas") {
-        setPendingMove({ type: "cita", id: itemId, targetCol: toCol });
+        await supabase.from("citas").update({ estado: "pendiente" }).eq("id", itemId);
+        refresh();
         return;
       }
       if (fromCol === "citas-proximas" && toCol === "citas-por_agendar") {
@@ -525,7 +526,8 @@ function KanbanBoardView({
 
     if (type === "examen") {
       if (fromCol === "ex-por_agendar" && toCol === "ex-programados") {
-        setPendingMove({ type: "examen", id: itemId, targetCol: toCol });
+        await supabase.from("examenes").update({ fecha_solicitud: new Date().toISOString().split("T")[0] }).eq("id", itemId);
+        refresh();
         return;
       }
       if (fromCol === "ex-programados" && toCol === "ex-realizado") {
@@ -553,7 +555,12 @@ function KanbanBoardView({
 
     if (type === "auth") {
       if (fromCol === "auth-sin_gestionar" && toCol === "auth-en_tramite") {
-        setPendingMove({ type: "autorizacion", id: itemId, targetCol: toCol });
+        await supabase.from("autorizaciones_eps").update({
+          estado: "en_tramite",
+          fecha_envio_eps: new Date().toISOString().split("T")[0],
+        }).eq("id", itemId);
+        const { data } = await supabase.from("autorizaciones_eps").select("*, cita:cita_id(id, especialidad, fecha_hora), examen:examen_id(id, nombre, tipo)").order("fecha_orden", { ascending: false });
+        setAutorizaciones(data ?? []);
         return;
       }
       if (fromCol === "auth-en_tramite" && toCol === "auth-autorizada") {
