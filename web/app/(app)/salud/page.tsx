@@ -507,42 +507,37 @@ function KanbanBoardView({
     const supabase = createClient();
 
     if (type === "cita") {
-      if (fromCol === "citas-por_agendar" && toCol === "citas-proximas") {
-        await supabase.from("citas").update({ estado: "pendiente" }).eq("id", itemId);
-        refresh();
-        return;
-      }
-      if (fromCol === "citas-proximas" && toCol === "citas-por_agendar") {
+      if (toCol === "citas-por_agendar") {
         await supabase.from("citas").update({ estado: "por_agendar", fecha_hora: null }).eq("id", itemId);
         refresh();
         return;
       }
-      if (fromCol === "citas-proximas" && toCol === "citas-completadas") {
+      if (toCol === "citas-proximas") {
+        await supabase.from("citas").update({ estado: "pendiente" }).eq("id", itemId);
+        refresh();
+        return;
+      }
+      if (toCol === "citas-completadas") {
         await supabase.from("citas").update({ estado: "completada" }).eq("id", itemId);
-        refresh();
-        return;
-      }
-      if (fromCol === "citas-completadas" && toCol === "citas-por_agendar") {
-        await supabase.from("citas").update({ estado: "por_agendar", fecha_hora: null }).eq("id", itemId);
-        refresh();
-        return;
-      }
-      if (fromCol === "citas-completadas" && toCol === "citas-proximas") {
-        await supabase.from("citas").update({ estado: "pendiente" }).eq("id", itemId);
         refresh();
         return;
       }
     }
 
     if (type === "examen") {
-      if (fromCol === "ex-por_agendar" && toCol === "ex-programados") {
+      if (toCol === "ex-programados") {
         await supabase.from("examenes").update({ fecha_solicitud: new Date().toISOString().split("T")[0] }).eq("id", itemId);
         refresh();
         return;
       }
-      if (fromCol === "ex-programados" && toCol === "ex-realizado") {
+      if (toCol === "ex-realizado") {
         const hoy = new Date().toISOString().split("T")[0];
         await supabase.from("examenes").update({ estado: "listo", fecha_realizacion: hoy }).eq("id", itemId);
+        refresh();
+        return;
+      }
+      if (toCol === "ex-por_agendar") {
+        await supabase.from("examenes").update({ fecha_solicitud: null }).eq("id", itemId);
         refresh();
         return;
       }
@@ -1139,53 +1134,95 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
 
 /* ─── Mobile lists ───────────────────────────────────────────────── */
 
+function MobileCitaCard({ cita, index }: { cita: Cita; index: number }) {
+  const porAgendar  = cita.estado === "por_agendar";
+  const completada  = cita.estado === "completada";
+  const fh = cita.fecha_hora ? formatFechaHora(cita.fecha_hora) : null;
+  const accent   = completada ? "#16a34a" : porAgendar ? "#e65100" : "#C0546A";
+  const accentBg = completada ? "#dcfce7"  : porAgendar ? "#FFF3E0" : "#F2C5CE";
+  const badgeLabel = completada ? "✓ Completada" : porAgendar ? "⏳ Por agendar" : (fh?.fecha ?? "Sin fecha");
+  return (
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+      <Link href={`/salud/cita/${cita.id}`}>
+        <div className="bg-card rounded-2xl p-4 border border-border shadow-sm active:scale-[0.98] transition-transform">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-bold text-sm leading-snug">{cita.especialidad}</p>
+            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0"
+              style={{ background: accentBg, color: accent }}>
+              {badgeLabel}
+            </span>
+          </div>
+          {cita.medico && <p className="text-xs text-muted-foreground mt-0.5">{cita.medico}</p>}
+          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-border">
+            {fh ? (
+              <div className="flex items-center gap-1">
+                <Clock size={12} className="text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{fh.hora}</span>
+              </div>
+            ) : (
+              !completada && <span className="text-xs font-semibold" style={{ color: "#e65100" }}>Sin fecha asignada</span>
+            )}
+            {cita.acompanante && <span className="text-xs text-muted-foreground">Acomp: <span className="font-semibold text-foreground">{cita.acompanante.nombre}</span></span>}
+            {cita.archivo_url && <FileText size={12} color="#C0546A" className="ml-auto" />}
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+function MobileSectionHeader({ label, count, color, bg }: { label: string; count: number; color: string; bg: string }) {
+  return (
+    <div className="flex items-center gap-2 mt-4 mb-2 first:mt-0">
+      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-xs font-bold uppercase tracking-wide" style={{ color }}>{label}</span>
+      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: bg, color }}>{count}</span>
+      <div className="flex-1 h-px" style={{ background: color + "22" }} />
+    </div>
+  );
+}
+
 function MobileCitasList({ citas, loading, nuevaCitaHref }: { citas: Cita[]; loading: boolean; nuevaCitaHref: string }) {
+  const porAgendar  = citas.filter(c => c.estado === "por_agendar");
+  const proximas    = citas.filter(c => c.estado === "pendiente");
+  const completadas = citas.filter(c => c.estado === "completada");
+  const total = citas.length;
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground">{loading ? "…" : `${citas.length} cita${citas.length !== 1 ? "s" : ""}`}</p>
+        <p className="text-xs text-muted-foreground">{loading ? "…" : `${total} cita${total !== 1 ? "s" : ""}`}</p>
         <Link href={nuevaCitaHref} className="flex items-center gap-1 text-xs font-semibold text-primary"><Plus size={13} />Nueva cita</Link>
       </div>
       {loading ? (
         <div className="flex flex-col gap-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
-      ) : citas.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState icon={Calendar} texto="Sin citas registradas" href={nuevaCitaHref} cta="Agregar primera cita" />
       ) : (
-        <div className="flex flex-col gap-3">
-          {citas.map((cita, i) => {
-            const porAgendar = cita.estado === "por_agendar";
-            const fh = cita.fecha_hora ? formatFechaHora(cita.fecha_hora) : null;
-            const accent   = porAgendar ? "#e65100" : "#C0546A";
-            const accentBg = porAgendar ? "#FFF3E0" : "#F2C5CE";
-            return (
-              <motion.div key={cita.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <Link href={`/salud/cita/${cita.id}`}>
-                  <div className="bg-card rounded-2xl p-4 border border-border shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-sm">{cita.especialidad}</p>
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0"
-                        style={{ background: accentBg, color: accent }}>
-                        {porAgendar ? "⏳ Por agendar" : (fh?.fecha ?? "")}
-                      </span>
-                    </div>
-                    {cita.medico && <p className="text-xs text-muted-foreground mt-0.5">{cita.medico}</p>}
-                    <div className="flex items-center gap-4 mt-2 pt-2 border-t border-border">
-                      {fh ? (
-                        <div className="flex items-center gap-1">
-                          <Clock size={12} className="text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{fh.hora}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-semibold" style={{ color: "#e65100" }}>Sin fecha asignada</span>
-                      )}
-                      {cita.acompanante && <span className="text-xs text-muted-foreground">Acomp: <span className="font-semibold text-foreground">{cita.acompanante.nombre}</span></span>}
-                      {cita.archivo_url && <FileText size={12} color="#C0546A" className="ml-auto" />}
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            );
-          })}
+        <div className="flex flex-col">
+          {porAgendar.length > 0 && (
+            <>
+              <MobileSectionHeader label="Por agendar" count={porAgendar.length} color="#e65100" bg="#FFF3E0" />
+              <div className="flex flex-col gap-2.5">
+                {porAgendar.map((c, i) => <MobileCitaCard key={c.id} cita={c} index={i} />)}
+              </div>
+            </>
+          )}
+          {proximas.length > 0 && (
+            <>
+              <MobileSectionHeader label="Próximas" count={proximas.length} color="#C0546A" bg="#F2C5CE" />
+              <div className="flex flex-col gap-2.5">
+                {proximas.map((c, i) => <MobileCitaCard key={c.id} cita={c} index={i} />)}
+              </div>
+            </>
+          )}
+          {completadas.length > 0 && (
+            <>
+              <MobileSectionHeader label="Completadas" count={completadas.length} color="#16a34a" bg="#dcfce7" />
+              <div className="flex flex-col gap-2.5">
+                {completadas.map((c, i) => <MobileCitaCard key={c.id} cita={c} index={i} />)}
+              </div>
+            </>
+          )}
         </div>
       )}
     </>
@@ -1197,6 +1234,68 @@ function MobileMedsList({ medicamentos, medsPorReclamar, medsConEntregas, loadin
   marcarEntregaReclamada: (id: string) => void;
 }) {
   const totalActivos = medsPorReclamar.length + medsConEntregas.length;
+  const medsInactivos = medicamentos.filter(m => !m.activo);
+
+  const MedCard = ({ med, index }: { med: Medicamento; index: number }) => {
+    const entregas = med.entregas_medicamento ?? [];
+    const reclamadas = entregas.filter(e => e.estado === "reclamada").length;
+    const porReclamar = med.activo && reclamadas === 0;
+    const proxima = entregas.find(e => e.estado === "pendiente" && e.fecha_programada);
+    const dotColor = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#22c55e";
+    return (
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+        <div className="bg-card rounded-2xl p-4 border border-border shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Circle size={8} fill={dotColor} color={dotColor} className="shrink-0" />
+              <div className="min-w-0">
+                <p className="font-bold text-sm truncate">{med.nombre}</p>
+                {med.dosis && <p className="text-xs text-muted-foreground">{med.dosis}</p>}
+              </div>
+            </div>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+              style={!med.activo
+                ? { background: "#f3f4f6", color: "#6b7280" }
+                : porReclamar
+                ? { background: "#FFF3E0", color: "#e65100" }
+                : { background: "#f0fdf4", color: "#15803d" }}>
+              {!med.activo ? "Inactivo" : porReclamar ? "Por reclamar" : "Activo"}
+            </span>
+          </div>
+          {proxima && !reclamadas && (
+            <p className="text-[11px] font-semibold ml-4 mt-1" style={{ color: "#e65100" }}>
+              Entrega {proxima.numero_entrega}: {formatFechaCorta(proxima.fecha_programada!)}
+            </p>
+          )}
+          {med.frecuencia && <p className="text-xs text-muted-foreground mt-1.5 ml-4">{med.frecuencia}</p>}
+          {med.horas_toma && med.horas_toma.length > 0 && (
+            <div className="flex gap-1.5 mt-2 ml-4 flex-wrap">
+              {med.horas_toma.map(h => (
+                <span key={h} className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#F2C5CE", color: "#C0546A" }}>{h}</span>
+              ))}
+            </div>
+          )}
+          {entregas.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Package size={12} className="text-muted-foreground" />
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                  Entregas · {reclamadas}/{entregas.length} reclamadas
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {entregas.sort((a, b) => a.numero_entrega - b.numero_entrega).map(entrega => (
+                  <ChipEntrega key={entrega.id} entrega={entrega} total={entregas.length}
+                    onMarcar={() => marcarEntregaReclamada(entrega.id)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-3">
@@ -1208,66 +1307,31 @@ function MobileMedsList({ medicamentos, medsPorReclamar, medsConEntregas, loadin
       ) : medicamentos.length === 0 ? (
         <EmptyState icon={Pill} texto="Sin medicamentos registrados" href={nuevoMedHref} cta="Agregar medicamento" />
       ) : (
-        <div className="flex flex-col gap-3">
-          {medicamentos.map((med, i) => {
-            const entregas = med.entregas_medicamento ?? [];
-            const reclamadas = entregas.filter(e => e.estado === "reclamada").length;
-            const porReclamar = med.activo && reclamadas === 0;
-            const proxima = entregas.find(e => e.estado === "pendiente" && e.fecha_programada);
-            const dotColor = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#22c55e";
-            return (
-              <motion.div key={med.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <div className="bg-card rounded-2xl p-4 border border-border shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Circle size={8} fill={dotColor} color={dotColor} />
-                      <div>
-                        <p className="font-bold text-sm">{med.nombre}</p>
-                        {med.dosis && <p className="text-xs text-muted-foreground">{med.dosis}</p>}
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                      style={!med.activo
-                        ? { background: "#f3f4f6", color: "#6b7280" }
-                        : porReclamar
-                        ? { background: "#FFF3E0", color: "#e65100" }
-                        : { background: "#f0fdf4", color: "#15803d" }}>
-                      {!med.activo ? "Inactivo" : porReclamar ? "Por reclamar" : "Activo"}
-                    </span>
-                  </div>
-                  {proxima && !reclamadas && (
-                    <p className="text-[11px] font-semibold ml-4 mt-1" style={{ color: "#e65100" }}>
-                      Entrega {proxima.numero_entrega}: {formatFechaCorta(proxima.fecha_programada!)}
-                    </p>
-                  )}
-                  {med.frecuencia && <p className="text-xs text-muted-foreground mt-1.5 ml-4">{med.frecuencia}</p>}
-                  {med.horas_toma && med.horas_toma.length > 0 && (
-                    <div className="flex gap-1.5 mt-2 ml-4 flex-wrap">
-                      {med.horas_toma.map(h => (
-                        <span key={h} className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#F2C5CE", color: "#C0546A" }}>{h}</span>
-                      ))}
-                    </div>
-                  )}
-                  {entregas.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Package size={12} className="text-muted-foreground" />
-                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
-                          Entregas · {reclamadas}/{entregas.length} reclamadas
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {entregas.sort((a, b) => a.numero_entrega - b.numero_entrega).map(entrega => (
-                          <ChipEntrega key={entrega.id} entrega={entrega} total={entregas.length}
-                            onMarcar={() => marcarEntregaReclamada(entrega.id)} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
+        <div className="flex flex-col">
+          {medsPorReclamar.length > 0 && (
+            <>
+              <MobileSectionHeader label="Por reclamar" count={medsPorReclamar.length} color="#e65100" bg="#FFF3E0" />
+              <div className="flex flex-col gap-2.5">
+                {medsPorReclamar.map((m, i) => <MedCard key={m.id} med={m} index={i} />)}
+              </div>
+            </>
+          )}
+          {medsConEntregas.length > 0 && (
+            <>
+              <MobileSectionHeader label="Activos" count={medsConEntregas.length} color="#2E7D6A" bg="#B8E2D4" />
+              <div className="flex flex-col gap-2.5">
+                {medsConEntregas.map((m, i) => <MedCard key={m.id} med={m} index={i} />)}
+              </div>
+            </>
+          )}
+          {medsInactivos.length > 0 && (
+            <>
+              <MobileSectionHeader label="Inactivos" count={medsInactivos.length} color="#6b7280" bg="#f3f4f6" />
+              <div className="flex flex-col gap-2.5">
+                {medsInactivos.map((m, i) => <MedCard key={m.id} med={m} index={i} />)}
+              </div>
+            </>
+          )}
         </div>
       )}
     </>
