@@ -537,21 +537,19 @@ function KanbanBoardView({
         return;
       }
       if (toCol === "ex-por_agendar") {
-        await supabase.from("examenes").update({ fecha_solicitud: null }).eq("id", itemId);
+        await supabase.from("examenes").update({ fecha_solicitud: null, estado: "pendiente", fecha_realizacion: null }).eq("id", itemId);
         refresh();
         return;
       }
     }
 
     if (type === "med") {
-      const toInactivo = toCol === "meds-inactivos";
-      const fromInactivo = fromCol === "meds-inactivos";
-      if (!fromInactivo && toInactivo) {
+      if (toCol === "meds-inactivos") {
         await supabase.from("medicamentos").update({ activo: false }).eq("id", itemId);
         refresh();
         return;
       }
-      if (fromInactivo && !toInactivo) {
+      if (toCol === "meds-por-reclamar" || toCol === "meds-activos") {
         await supabase.from("medicamentos").update({ activo: true }).eq("id", itemId);
         refresh();
         return;
@@ -559,21 +557,32 @@ function KanbanBoardView({
     }
 
     if (type === "auth") {
-      if (fromCol === "auth-sin_gestionar" && toCol === "auth-en_tramite") {
+      const refreshAuth = async () => {
+        const { data } = await supabase
+          .from("autorizaciones_eps")
+          .select("*, cita:cita_id(id, especialidad, fecha_hora), examen:examen_id(id, nombre, tipo)")
+          .order("fecha_orden", { ascending: false });
+        setAutorizaciones(data ?? []);
+      };
+      if (toCol === "auth-sin_gestionar") {
+        await supabase.from("autorizaciones_eps").update({ estado: "sin_gestionar" }).eq("id", itemId);
+        await refreshAuth();
+        return;
+      }
+      if (toCol === "auth-en_tramite") {
         await supabase.from("autorizaciones_eps").update({
           estado: "en_tramite",
           fecha_envio_eps: new Date().toISOString().split("T")[0],
         }).eq("id", itemId);
-        const { data } = await supabase.from("autorizaciones_eps").select("*, cita:cita_id(id, especialidad, fecha_hora), examen:examen_id(id, nombre, tipo)").order("fecha_orden", { ascending: false });
-        setAutorizaciones(data ?? []);
+        await refreshAuth();
         return;
       }
-      if (fromCol === "auth-en_tramite" && toCol === "auth-autorizada") {
-        await supabase.from("autorizaciones_eps")
-          .update({ estado: "autorizada", fecha_autorizacion: new Date().toISOString().split("T")[0] })
-          .eq("id", itemId);
-        const { data } = await supabase.from("autorizaciones_eps").select("*, cita:cita_id(id, especialidad, fecha_hora), examen:examen_id(id, nombre, tipo)").order("fecha_orden", { ascending: false });
-        setAutorizaciones(data ?? []);
+      if (toCol === "auth-autorizada") {
+        await supabase.from("autorizaciones_eps").update({
+          estado: "autorizada",
+          fecha_autorizacion: new Date().toISOString().split("T")[0],
+        }).eq("id", itemId);
+        await refreshAuth();
         return;
       }
     }
