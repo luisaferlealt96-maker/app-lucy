@@ -166,7 +166,7 @@ function NuevoExamenContent() {
   const venc = authForm.fecha_orden ? vencimientoTexto(authForm.fecha_orden, parseInt(authForm.vigencia_dias) || 120) : null;
 
   return (
-    <div className="min-h-dvh bg-background pb-32 max-w-md mx-auto">
+    <div className="min-h-dvh bg-background pb-32 max-w-md md:max-w-xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -514,7 +514,7 @@ function NuevoExamenContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end"
+            className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center"
             style={{ background: "rgba(0,0,0,0.45)" }}
             onClick={e => { if (e.target === e.currentTarget) setShowAuthModal(false); }}
           >
@@ -523,7 +523,7 @@ function NuevoExamenContent() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="w-full max-w-md mx-auto bg-background rounded-t-3xl px-4 pt-4 pb-10 flex flex-col gap-4"
+              className="w-full max-w-md md:max-w-xl mx-auto bg-background rounded-t-3xl md:rounded-3xl px-4 pt-4 pb-10 md:pb-6 flex flex-col gap-4"
               style={{ maxHeight: "90dvh", overflowY: "auto" }}
             >
               {/* Handle */}

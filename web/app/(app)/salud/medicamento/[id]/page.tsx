@@ -176,7 +176,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
   const reclamadas = entregas.filter(e => e.estado === "reclamada").length;
 
   return (
-    <div className="min-h-dvh bg-background pb-20 max-w-lg mx-auto">
+    <div className="min-h-dvh bg-background pb-20 max-w-lg md:max-w-2xl mx-auto">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
         className="px-4 pt-12 pb-5" style={{ background: "#B8E2D4" }}>
@@ -414,7 +414,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end"
+            className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center"
             style={{ background: "rgba(0,0,0,0.45)" }}
             onClick={e => { if (e.target === e.currentTarget) setShowEdit(false); }}
           >
@@ -423,7 +423,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="w-full max-w-lg mx-auto bg-background rounded-t-3xl px-4 pt-4 pb-10 flex flex-col gap-4"
+              className="w-full max-w-lg md:max-w-2xl mx-auto bg-background rounded-t-3xl md:rounded-3xl px-4 pt-4 pb-10 md:pb-6 flex flex-col gap-4"
               style={{ maxHeight: "92dvh", overflowY: "auto" }}
             >
               <div className="w-10 h-1 rounded-full bg-border mx-auto mb-1" />

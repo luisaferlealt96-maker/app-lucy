@@ -36,7 +36,31 @@
       "PowerShell(gh auth status 2>&1)",
       "PowerShell(winget install --id GitHub.cli --silent --accept-package-agreements --accept-source-agreements 2>&1)",
       "PowerShell(npm install -g @githubnext/github-models 2>&1)",
-      "PowerShell(npm install -g gh 2>&1)"
+      "PowerShell(npm install -g gh 2>&1)",
+      "PowerShell(gh --version 2>&1)",
+      "PowerShell(npm install -g vercel 2>&1)",
+      "PowerShell(npm approve-scripts esbuild 2>&1)",
+      "PowerShell(npm approve-scripts --allow-scripts-pending 2>&1)",
+      "PowerShell(vercel --version 2>&1)",
+      "PowerShell(vercel whoami 2>&1)",
+      "Bash(npx vercel *)",
+      "PowerShell(git config --global credential.helper 2>&1)",
+      "PowerShell(git credential-manager version 2>&1)",
+      "PowerShell(npm cache clean --force 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\"; echo \"uMIUcGFpOlPnYVf3Ao1hqi8wradQtxjB\" | npx vercel env add CRON_SECRET production --token=$\\(npx vercel whoami 2>$null\\) 2>&1)",
+      "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__list_teams",
+      "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__list_deployments",
+      "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__list_projects",
+      "Bash(supabase --version)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(supabase functions *)",
+      "Bash(git revert *)",
+      "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__get_runtime_logs",
+      "Bash(supabase db *)",
+      "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__get_project",
+      "Bash(vercel env *)",
+      "Bash(supabase secrets *)"
     ]
   }
 }

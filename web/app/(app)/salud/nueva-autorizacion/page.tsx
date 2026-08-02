@@ -126,7 +126,7 @@ function NuevaAutorizacionContent() {
   const examenVinculado = form.examen_id ? examenes.find(e => e.id === form.examen_id) : null;
 
   return (
-    <div className="min-h-dvh bg-background pb-32 max-w-md mx-auto">
+    <div className="min-h-dvh bg-background pb-32 max-w-md md:max-w-xl mx-auto">
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}

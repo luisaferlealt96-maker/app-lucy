@@ -121,7 +121,7 @@ function NuevoMedicamentoContent() {
   const valido = form.paciente_id && form.nombre;
 
   return (
-    <div className="min-h-dvh bg-background pb-32 max-w-md mx-auto">
+    <div className="min-h-dvh bg-background pb-32 max-w-md md:max-w-xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}

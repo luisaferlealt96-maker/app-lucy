@@ -62,7 +62,7 @@ export default function PerfilSaludPage() {
   const citasPendientes = citas.filter(c => c.estado === "pendiente" || c.estado === "por_agendar").length;
 
   return (
-    <div className="min-h-dvh bg-background pb-20 max-w-lg mx-auto">
+    <div className="min-h-dvh bg-background pb-20 max-w-lg md:max-w-2xl mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0 }}
