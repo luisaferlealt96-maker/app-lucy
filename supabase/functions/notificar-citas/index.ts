@@ -119,11 +119,15 @@ serve(async (req) => {
 
     // ── CRON: recordatorio automático 24h antes de citas ────────────────
     if (tipo === "recordatorio") {
-      const hoy    = new Date();
-      const manana = new Date(hoy);
-      manana.setDate(hoy.getDate() + 1);
-      const inicio = new Date(manana); inicio.setHours(0, 0, 0, 0);
-      const fin    = new Date(manana); fin.setHours(23, 59, 59, 999);
+      // Colombia = UTC−5. Calcular "mañana en Bogotá" y convertir a UTC para el query.
+      const OFFSET_MS = 5 * 60 * 60 * 1000;
+      const ahoraBogota = new Date(Date.now() - OFFSET_MS);
+      const mananaBogota = new Date(ahoraBogota);
+      mananaBogota.setUTCDate(ahoraBogota.getUTCDate() + 1);
+      // Inicio de mañana en Bogotá (medianoche Bogotá = 05:00 UTC)
+      const inicio = new Date(Date.UTC(mananaBogota.getUTCFullYear(), mananaBogota.getUTCMonth(), mananaBogota.getUTCDate(), 5, 0, 0, 0));
+      // Fin de mañana en Bogotá (23:59 Bogotá = 04:59:59 UTC del día siguiente)
+      const fin    = new Date(Date.UTC(mananaBogota.getUTCFullYear(), mananaBogota.getUTCMonth(), mananaBogota.getUTCDate() + 1, 4, 59, 59, 999));
 
       const [{ data: citas }, { data: todosLos }] = await Promise.all([
         sb.from("citas")

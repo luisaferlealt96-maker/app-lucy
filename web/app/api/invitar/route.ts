@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${serviceKey}`,
       },
-      body: JSON.stringify({ email, nombre, redirectTo: `${origin}/auth/callback` }),
+      body: JSON.stringify({ email, nombre, redirectTo: `${origin}/auth/callback?invite=1` }),
     }
   );
 

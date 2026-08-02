@@ -12,8 +12,10 @@ export default function AuthCallbackPage() {
     const handle = async () => {
       try {
         const supabase = createClient();
+        const searchParams = new URLSearchParams(window.location.search);
+        const isInvite = searchParams.get("invite") === "1";
 
-        const ir = async (userId: string, email: string | null | undefined) => {
+        const ir = async (userId: string, email: string | null | undefined, forceSetPassword = false) => {
           setMsg("Buscando tu perfil...");
           let { data: miembro } = await supabase
             .from("miembros_familia")
@@ -22,10 +24,11 @@ export default function AuthCallbackPage() {
             .maybeSingle();
 
           if (!miembro && email) {
+            // Búsqueda insensible a mayúsculas para tolerar pequeñas diferencias de capitalización
             const { data: porEmail } = await supabase
               .from("miembros_familia")
               .select("id, rol")
-              .eq("email", email)
+              .ilike("email", email)
               .maybeSingle();
 
             if (porEmail) {
@@ -34,6 +37,13 @@ export default function AuthCallbackPage() {
                 .eq("id", porEmail.id);
               miembro = porEmail;
             }
+          }
+
+          // Invitaciones nuevas: ir primero a crear contraseña
+          if (forceSetPassword || isInvite) {
+            setMsg("Crea tu contraseña para entrar la próxima vez...");
+            window.location.href = "/nueva-contrasena";
+            return;
           }
 
           const dest = miembro?.rol === "abuela" ? "/abuela" : "/inicio";
@@ -61,13 +71,15 @@ export default function AuthCallbackPage() {
               window.location.href = "/reset-password";
               return;
             }
-            await ir(data.session.user.id, data.session.user.email);
+            // type === "invite" o "signup" = primera vez de un usuario invitado
+            const esInvitacion = type === "invite" || type === "signup" || isInvite;
+            await ir(data.session.user.id, data.session.user.email, esInvitacion);
             return;
           }
         }
 
         // Intento 2: code en la query string (flujo PKCE)
-        const code = new URLSearchParams(window.location.search).get("code");
+        const code = searchParams.get("code");
         const isReset = localStorage.getItem("__password_reset") === "1";
         if (code) {
           setMsg("Verificando tu acceso...");

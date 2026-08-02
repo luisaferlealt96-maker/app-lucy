@@ -19,10 +19,12 @@ export default function InicioPage() {
   const { citas, loading: citasLoading } = useCitasProximas(4);
   const { miembros, loading: miembrosLoading } = useMiembros();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentEmail, setCurrentEmail]   = useState<string | null>(null);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       setCurrentUserId(data.user?.id ?? null);
+      setCurrentEmail(data.user?.email ?? null);
     });
   }, []);
 
@@ -31,7 +33,8 @@ export default function InicioPage() {
   });
   const todayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
 
-  const yo = miembros.find(m => m.user_id === currentUserId);
+  const yo = miembros.find(m => m.user_id === currentUserId)
+    ?? (currentEmail ? miembros.find(m => m.email?.toLowerCase() === currentEmail.toLowerCase()) : null);
   const salud = yo ?? miembros.find(m => m.rol === "admin");
   const saludStat = citasLoading ? "…" : `${citas.length} cita${citas.length !== 1 ? "s" : ""} próxima${citas.length !== 1 ? "s" : ""}`;
 
