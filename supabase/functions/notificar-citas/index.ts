@@ -77,9 +77,9 @@ function diasHabilesDesde(fechaStr: string): number {
   }
   return days;
 }
-function diasRestantes(fechaOrdenStr: string): number {
+function diasRestantes(fechaOrdenStr: string, vigenciaDias = 120): number {
   const venc = new Date(fechaOrdenStr + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigenciaDias);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 function diasDesde(fechaStr: string): number {
@@ -360,24 +360,19 @@ serve(async (req) => {
 
     // ── CRON: autorizaciones EPS ─────────────────────────────────────────
     if (tipo === "autorizaciones") {
-      const [{ data: autorizaciones }, { data: admins }] = await Promise.all([
+      const [{ data: autorizaciones }, { data: todosConTel }] = await Promise.all([
         sb.from("autorizaciones_eps").select("*").in("estado", ["sin_gestionar", "en_tramite"]),
-        sb.from("miembros_familia").select("nombre, telefono, user_id, rol").eq("activo", true).not("telefono", "is", null),
+        sb.from("miembros_familia").select("nombre, telefono").eq("activo", true).not("telefono", "is", null),
       ]);
-      const adminsList = (admins ?? []).filter((m: { rol: string }) => m.rol === "admin") as { nombre: string; telefono: string; user_id: string | null }[];
+      const receptoresFijos = (todosConTel ?? []) as { nombre: string; telefono: string }[];
       let enviados = 0;
 
       for (const a of autorizaciones ?? []) {
-        const receptores: { nombre: string; telefono: string }[] = [...adminsList];
-        if (a.created_by) {
-          const creator = (admins ?? []).find((m: { user_id: string | null; rol: string }) => m.user_id === a.created_by && m.rol !== "admin") as { nombre: string; telefono: string } | undefined;
-          if (creator) receptores.push(creator);
-        }
-        if (receptores.length === 0) continue;
-        const diasRestant = diasRestantes(a.fecha_orden);
+        if (receptoresFijos.length === 0) continue;
+        const diasRestant = diasRestantes(a.fecha_orden, a.vigencia_dias ?? 120);
 
         if (a.estado === "sin_gestionar" && diasRestant > 0 && diasRestant <= 30) {
-          for (const m of receptores) {
+          for (const m of receptoresFijos) {
             const ok = await enviarWA(m.telefono!, "orden_lucy_por_vencer", [
               { name: "nombre",      value: m.nombre },
               { name: "descripcion", value: a.descripcion },
@@ -391,7 +386,7 @@ serve(async (req) => {
         if (a.estado === "en_tramite" && a.fecha_envio_eps) {
           const diasHab = diasHabilesDesde(a.fecha_envio_eps);
           if (diasHab >= 5) {
-            for (const m of receptores) {
+            for (const m of receptoresFijos) {
               const ok = await enviarWA(m.telefono!, "orden_lucy_tramite_demorado", [
                 { name: "nombre",       value: m.nombre },
                 { name: "dias_habiles", value: diasHab.toString() },
@@ -413,29 +408,33 @@ serve(async (req) => {
       cincoAtras.setDate(cincoAtras.getDate() - 5);
       const cincoAtrasStr = cincoAtras.toISOString().split("T")[0];
 
-      const { data: examenes } = await sb.from("examenes")
-        .select("*")
-        .eq("estado", "listo")
-        .not("fecha_solicitud", "is", null)
-        .lte("fecha_solicitud", cincoAtrasStr)
-        .is("archivo_resultado_url", null)
-        .eq("recordatorio_resultado_enviado", false);
+      const [{ data: examenes }, { data: todosActivos }] = await Promise.all([
+        sb.from("examenes")
+          .select("*")
+          .eq("estado", "listo")
+          .not("fecha_solicitud", "is", null)
+          .lte("fecha_solicitud", cincoAtrasStr)
+          .is("archivo_resultado_url", null)
+          .eq("recordatorio_resultado_enviado", false),
+        sb.from("miembros_familia").select("nombre, telefono").eq("activo", true).not("telefono", "is", null),
+      ]);
+      const receptoresResultados = (todosActivos ?? []) as { nombre: string; telefono: string }[];
 
       let enviados = 0;
 
       for (const e of examenes ?? []) {
-        const receptores = await getRecipientes(sb, e.created_by);
-        if (receptores.length === 0) continue;
+        if (receptoresResultados.length === 0) continue;
         const diasTranscurridos = diasDesde(e.fecha_solicitud);
-        for (const m of receptores) {
+        let okCount = 0;
+        for (const m of receptoresResultados) {
           const ok = await enviarWA(m.telefono!, "resultado_lucy_pendiente", [
             { name: "nombre",        value: m.nombre },
             { name: "dias",          value: diasTranscurridos.toString() },
             { name: "nombre_examen", value: e.nombre },
           ]);
-          if (ok) enviados++;
+          if (ok) { enviados++; okCount++; }
         }
-        if (enviados > 0) {
+        if (okCount > 0) {
           await sb.from("examenes").update({ recordatorio_resultado_enviado: true }).eq("id", e.id);
         }
       }
@@ -460,9 +459,9 @@ serve(async (req) => {
         sb.from("miembros_familia").select("*").eq("activo", true),
       ]);
 
-      const lucy = (todosLos ?? []).find((m: { rol: string }) => m.rol === "abuela");
+      const conTelefono = (todosLos ?? []).filter((m: { telefono: string | null }) => m.telefono) as { nombre: string; telefono: string }[];
 
-      if (!lucy?.telefono || !(citas ?? []).length) {
+      if (!conTelefono.length || !(citas ?? []).length) {
         return new Response(
           JSON.stringify({ ok: true, tipo, citasEncontradas: citas?.length ?? 0, enviados: 0 }),
           { headers: { ...cors, "Content-Type": "application/json" } },
@@ -476,16 +475,17 @@ serve(async (req) => {
         const hora     = horaCorta(c.fecha_hora);
         const lugar    = c.lugar ?? "por confirmar";
         const lugarUrl = encodeURIComponent(lugar);
-        const acompNom = (c.acompanante as { nombre: string } | null)?.nombre ?? "sin asignar";
 
-        const ok = await enviarWA(lucy.telefono, "cita_lucy_recordatorio", [
-          { name: "nombre",       value: "Lucy" },
-          { name: "especialidad", value: esp },
-          { name: "fecha",        value: fecha },
-          { name: "hora",         value: hora },
-          { name: "lugar",        value: lugar },
-        ], lugarUrl);
-        if (ok) enviados++;
+        for (const m of conTelefono) {
+          const ok = await enviarWA(m.telefono, "cita_lucy_recordatorio", [
+            { name: "nombre",       value: m.nombre },
+            { name: "especialidad", value: esp },
+            { name: "fecha",        value: fecha },
+            { name: "hora",         value: hora },
+            { name: "lugar",        value: lugar },
+          ], lugarUrl);
+          if (ok) enviados++;
+        }
 
         // pequeña pausa entre mensajes para no saturar la API
         await new Promise(r => setTimeout(r, 500));
