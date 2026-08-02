@@ -522,6 +522,16 @@ function KanbanBoardView({
         refresh();
         return;
       }
+      if (fromCol === "citas-completadas" && toCol === "citas-por_agendar") {
+        await supabase.from("citas").update({ estado: "por_agendar", fecha_hora: null }).eq("id", itemId);
+        refresh();
+        return;
+      }
+      if (fromCol === "citas-completadas" && toCol === "citas-proximas") {
+        await supabase.from("citas").update({ estado: "pendiente" }).eq("id", itemId);
+        refresh();
+        return;
+      }
     }
 
     if (type === "examen") {
