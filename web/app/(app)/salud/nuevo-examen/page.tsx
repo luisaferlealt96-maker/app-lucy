@@ -21,9 +21,9 @@ const ESPECIALIDADES = [
   "Gastroenterología", "Endocrinología", "Medicina general", "Otra",
 ];
 
-function vencimientoTexto(fechaOrden: string) {
+function vencimientoTexto(fechaOrden: string, vigenciaDias = 120) {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigenciaDias);
   const dias = Math.ceil((venc.getTime() - Date.now()) / 86400000);
   const fechaStr = venc.toLocaleDateString("es-CO", { day: "numeric", month: "long" });
   if (dias <= 0)  return { txt: "Esta orden ya venció", color: "#c62828" };
@@ -40,6 +40,7 @@ const TIPO_AUTH_MAP: Record<string, TipoAutorizacion> = {
 
 type AuthForm = {
   fecha_orden: string;
+  vigencia_dias: string;
   estado: "sin_gestionar" | "en_tramite";
   fecha_envio_eps: string;
   notas: string;
@@ -72,6 +73,7 @@ function NuevoExamenContent() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authForm, setAuthForm] = useState<AuthForm>({
     fecha_orden: "",
+    vigencia_dias: "120",
     estado: "sin_gestionar",
     fecha_envio_eps: "",
     notas: "",
@@ -125,6 +127,7 @@ function NuevoExamenContent() {
         descripcion: form.nombre,
         tipo: TIPO_AUTH_MAP[form.tipo] ?? "examen",
         fecha_orden: authForm.fecha_orden,
+        vigencia_dias: parseInt(authForm.vigencia_dias) || 120,
         estado: authForm.estado,
         fecha_envio_eps: authForm.fecha_envio_eps || null,
         notas: authForm.notas || null,
@@ -160,7 +163,7 @@ function NuevoExamenContent() {
     { value: "procedimiento", label: "⚕️ Procedimiento",       desc: "Cirugías, infiltraciones..." },
   ];
 
-  const venc = authForm.fecha_orden ? vencimientoTexto(authForm.fecha_orden) : null;
+  const venc = authForm.fecha_orden ? vencimientoTexto(authForm.fecha_orden, parseInt(authForm.vigencia_dias) || 120) : null;
 
   return (
     <div className="min-h-dvh bg-background pb-32 max-w-md mx-auto">
@@ -553,7 +556,7 @@ function NuevoExamenContent() {
               {/* Fecha de la orden */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-foreground uppercase tracking-wide">Fecha de la orden médica</label>
-                <p className="text-xs text-muted-foreground -mt-0.5">El día que el médico escribió la orden. Tiene 120 días de vigencia.</p>
+                <p className="text-xs text-muted-foreground -mt-0.5">El día que el médico escribió la orden.</p>
                 <Input
                   type="date"
                   value={authForm.fecha_orden}
@@ -563,6 +566,20 @@ function NuevoExamenContent() {
                 {venc && (
                   <p className="text-xs font-semibold" style={{ color: venc.color }}>{venc.txt}</p>
                 )}
+              </div>
+
+              {/* Vigencia */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wide text-foreground">Vigencia de la orden (días)</label>
+                <p className="text-xs text-muted-foreground -mt-0.5">Cuántos días tiene de validez según la orden. Lo más común es 120 días.</p>
+                <Input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={authForm.vigencia_dias}
+                  onChange={e => setAuth("vigencia_dias", e.target.value)}
+                  className="rounded-xl border-border bg-card h-12"
+                />
               </div>
 
               {/* Estado */}

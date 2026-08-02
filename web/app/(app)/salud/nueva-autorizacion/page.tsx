@@ -11,16 +11,16 @@ import type { Cita, Examen, TipoAutorizacion } from "@/lib/supabase/types";
 
 type Modo = "seleccionar" | "cita" | "examen" | "formulario";
 
-function diasRestantes(fechaOrden: string): number {
+function diasRestantes(fechaOrden: string, vigenciaDias = 120): number {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigenciaDias);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 
-function vencimientoTexto(fechaOrden: string) {
-  const dias = diasRestantes(fechaOrden);
+function vencimientoTexto(fechaOrden: string, vigenciaDias = 120) {
+  const dias = diasRestantes(fechaOrden, vigenciaDias);
   const fecha = new Date(fechaOrden + "T12:00:00");
-  fecha.setDate(fecha.getDate() + 120);
+  fecha.setDate(fecha.getDate() + vigenciaDias);
   const fechaStr = fecha.toLocaleDateString("es-CO", { day: "numeric", month: "long" });
   if (dias <= 0) return { txt: "Esta orden ya venció", color: "#c62828" };
   if (dias <= 15) return { txt: `🔴 Vence en ${dias}d (${fechaStr}) — ¡urgente!`, color: "#c62828" };
@@ -42,6 +42,7 @@ function NuevaAutorizacionContent() {
     descripcion:     "",
     tipo:            "examen" as TipoAutorizacion,
     fecha_orden:     "",
+    vigencia_dias:   "120",
     estado:          "sin_gestionar",
     fecha_envio_eps: "",
     notas:           "",
@@ -106,6 +107,7 @@ function NuevaAutorizacionContent() {
       descripcion:     form.descripcion,
       tipo:            form.tipo,
       fecha_orden:     form.fecha_orden,
+      vigencia_dias:   parseInt(form.vigencia_dias) || 120,
       estado:          form.estado,
       fecha_envio_eps: form.fecha_envio_eps || null,
       notas:           form.notas || null,
@@ -119,7 +121,7 @@ function NuevaAutorizacionContent() {
   };
 
   const valido  = form.paciente_id && form.descripcion.trim() && form.fecha_orden;
-  const venc    = form.fecha_orden ? vencimientoTexto(form.fecha_orden) : null;
+  const venc    = form.fecha_orden ? vencimientoTexto(form.fecha_orden, parseInt(form.vigencia_dias) || 120) : null;
   const citaVinculada   = form.cita_id   ? citas.find(c => c.id === form.cita_id)     : null;
   const examenVinculado = form.examen_id ? examenes.find(e => e.id === form.examen_id) : null;
 
@@ -321,11 +323,20 @@ function NuevaAutorizacionContent() {
             {/* Fecha de la orden */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha de la orden médica</label>
-              <p className="text-xs text-muted-foreground -mt-0.5">El día que el médico escribió la orden. Desde aquí cuentan los 120 días de vigencia.</p>
+              <p className="text-xs text-muted-foreground -mt-0.5">El día que el médico escribió la orden.</p>
               <Input type="date" value={form.fecha_orden}
                 onChange={e => set("fecha_orden", e.target.value)}
                 className="h-12 rounded-xl border-border bg-card" />
               {venc && <p className="text-xs font-semibold" style={{ color: venc.color }}>{venc.txt}</p>}
+            </div>
+
+            {/* Vigencia */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wide text-foreground">Vigencia de la orden (días)</label>
+              <p className="text-xs text-muted-foreground -mt-0.5">Cuántos días tiene de validez según lo que dice la orden. Lo más común es 120 días.</p>
+              <Input type="number" min="1" max="365" value={form.vigencia_dias}
+                onChange={e => set("vigencia_dias", e.target.value)}
+                className="h-12 rounded-xl border-border bg-card" />
             </div>
 
             {/* Estado */}

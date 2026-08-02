@@ -110,6 +110,7 @@ export interface AutorizacionEPS {
   tipo: TipoAutorizacion;
   fecha_orden: string;
   estado: EstadoAutorizacion;
+  vigencia_dias: number;
   fecha_envio_eps: string | null;
   numero_autorizacion: string | null;
   fecha_autorizacion: string | null;
