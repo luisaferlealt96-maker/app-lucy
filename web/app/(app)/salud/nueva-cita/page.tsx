@@ -352,7 +352,14 @@ function NuevaCitaContent() {
           <label className="text-xs font-bold text-foreground uppercase tracking-wide">¿Quién la acompaña? (opcional)</label>
           <Select value={form.acompanante_id ?? ""} onValueChange={v => set("acompanante_id", v)}>
             <SelectTrigger className="rounded-xl border-border bg-card h-12">
-              <SelectValue placeholder="Sin acompañante asignado" />
+              {(() => {
+                const m = form.acompanante_id ? acompanantes.find(x => x.id === form.acompanante_id) : null;
+                return (
+                  <span className={`flex-1 text-left text-sm truncate${m ? "" : " text-muted-foreground"}`}>
+                    {m ? `${m.emoji ?? ""} ${m.nombre}`.trim() : "Sin acompañante asignado"}
+                  </span>
+                );
+              })()}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">Sin acompañante</SelectItem>
