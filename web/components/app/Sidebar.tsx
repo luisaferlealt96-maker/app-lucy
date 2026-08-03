@@ -52,7 +52,7 @@ export function Sidebar() {
             🏠
           </div>
           <div>
-            <p className="text-sm font-extrabold text-foreground leading-tight">Lucy Familia</p>
+            <p className="text-sm font-extrabold text-foreground leading-tight">App Lucy</p>
             <p className="text-[11px] text-muted-foreground font-medium">Panel familiar</p>
           </div>
         </div>

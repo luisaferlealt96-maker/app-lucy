@@ -1483,7 +1483,7 @@ function descargarSemanaImagen(weekDays: Date[], eventMap: Map<string, CalEvent[
   ctx.fillStyle = "#C0546A";
   ctx.font = "bold 22px system-ui, sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText("Lucy Familia", 24, 40);
+  ctx.fillText("App Lucy", 24, 40);
   const semLabel = `${weekDays[0].toLocaleDateString("es-CO",{day:"numeric",month:"long"})} – ${weekDays[6].toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"})}`;
   ctx.fillStyle = "#9B6070";
   ctx.font = "500 15px system-ui, sans-serif";
@@ -1563,7 +1563,7 @@ function descargarSemanaImagen(weekDays: Date[], eventMap: Map<string, CalEvent[
   ctx.fillStyle = "#AAA";
   ctx.font = "11px system-ui, sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText("Lucy Familia · app-lucy.vercel.app", W - 16, H - 8);
+  ctx.fillText("App Lucy · app-lucy.vercel.app", W - 16, H - 8);
 
   const link = document.createElement("a");
   link.download = `lucy-semana-${weekDays[0].toISOString().slice(0,10)}.png`;

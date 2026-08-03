@@ -112,7 +112,7 @@ export default function LoginPage() {
           >
             🏠
           </div>
-          <h1 className="text-3xl font-extrabold text-foreground">Lucy Familia</h1>
+          <h1 className="text-3xl font-extrabold text-foreground">App Lucy</h1>
           <p className="text-muted-foreground mt-1.5 text-sm font-medium">
             Tu familia organizada con amor
           </p>

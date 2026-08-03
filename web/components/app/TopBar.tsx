@@ -13,7 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
 export function TopBar() {
   const pathname = usePathname();
   const title =
-    Object.entries(PAGE_TITLES).find(([key]) => pathname.startsWith(key))?.[1] ?? "Lucy Familia";
+    Object.entries(PAGE_TITLES).find(([key]) => pathname.startsWith(key))?.[1] ?? "App Lucy";
 
   const today = new Date().toLocaleDateString("es-CO", {
     weekday: "long",
