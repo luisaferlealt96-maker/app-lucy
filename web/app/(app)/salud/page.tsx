@@ -67,7 +67,17 @@ export default function SaludPage() {
     setActiveTab(val);
     sessionStorage.setItem("salud_tab", val);
   };
-  const [kanbanBoard, setKanbanBoard] = useState<"citas" | "medicamentos" | "examenes" | "autorizaciones">("citas");
+  const [kanbanBoard, setKanbanBoard] = useState<"citas" | "medicamentos" | "examenes" | "autorizaciones">(() => {
+    if (typeof window !== "undefined") {
+      const s = sessionStorage.getItem("salud_kanban");
+      if (s === "citas" || s === "medicamentos" || s === "examenes" || s === "autorizaciones") return s;
+    }
+    return "citas";
+  });
+  const handleKanbanBoard = (b: "citas" | "medicamentos" | "examenes" | "autorizaciones") => {
+    setKanbanBoard(b);
+    sessionStorage.setItem("salud_kanban", b);
+  };
 
   // Search
   const [searchOpen, setSearchOpen] = useState(false);
@@ -325,7 +335,7 @@ export default function SaludPage() {
             { icon: Activity,     label: "Procedimientos pendientes", value: loading ? "–" : examenes.length.toString(),    accent: "#9B8EC4", bg: "#EDE9F7", board: "examenes"        as const },
           ].map(({ icon: Icon, label, value, accent, bg, board }, i) => (
             <motion.button key={label} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 + i * 0.06 }}
-              onClick={() => setKanbanBoard(board)}
+              onClick={() => handleKanbanBoard(board)}
               className="bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-center gap-4 text-left transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
               style={kanbanBoard === board ? { outline: `2px solid ${accent}40` } : {}}>
               <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
@@ -367,7 +377,7 @@ export default function SaludPage() {
             nuevoAuthHref={nuevoAuthHref}
             marcarEntregaReclamada={marcarEntregaReclamada}
             activeBoard={kanbanBoard}
-            onBoardChange={setKanbanBoard}
+            onBoardChange={handleKanbanBoard}
           />
         </motion.div>
       {/* Modal edición datos clínicos */}
@@ -1098,7 +1108,8 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
   const topBar  = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#2E7D6A";
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-      <div className="rounded-xl border border-black/6 bg-white overflow-hidden hover:shadow-md transition-all">
+      <Link href={`/salud/medicamento/${med.id}`}>
+      <div className="rounded-xl border border-black/6 bg-white overflow-hidden hover:shadow-md active:scale-[0.98] transition-all cursor-pointer">
         <div className="h-1 w-full" style={{ background: topBar }} />
         <div className="p-3.5">
           <div className="flex items-start justify-between gap-2">
@@ -1116,11 +1127,6 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
                   : { background: "#f0fdf4", color: "#15803d" }}>
                 {!med.activo ? "Inactivo" : porReclamar ? "Por reclamar" : "Activo"}
               </span>
-              <Link href={`/salud/medicamento/${med.id}`}
-                onClick={e => e.stopPropagation()}
-                className="w-5 h-5 rounded flex items-center justify-center hover:bg-black/10 transition-colors">
-                <ExternalLink size={10} className="text-muted-foreground" />
-              </Link>
             </div>
           </div>
           {med.dosis && <p className="text-xs text-muted-foreground mt-0.5 ml-3.5">{med.dosis}</p>}
@@ -1155,6 +1161,7 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
           )}
         </div>
       </div>
+      </Link>
     </motion.div>
   );
 }
@@ -1271,7 +1278,8 @@ function MobileMedsList({ medicamentos, medsPorReclamar, medsConEntregas, loadin
     const dotColor = !med.activo ? "#9ca3af" : porReclamar ? "#e65100" : "#22c55e";
     return (
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-        <div className="bg-card rounded-2xl p-4 border border-border shadow-sm">
+        <Link href={`/salud/medicamento/${med.id}`}>
+        <div className="bg-card rounded-2xl p-4 border border-border shadow-sm active:scale-[0.98] transition-transform cursor-pointer">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <Circle size={8} fill={dotColor} color={dotColor} className="shrink-0" />
@@ -1319,6 +1327,7 @@ function MobileMedsList({ medicamentos, medsPorReclamar, medsConEntregas, loadin
             </div>
           )}
         </div>
+        </Link>
       </motion.div>
     );
   };
@@ -1378,7 +1387,7 @@ function ChipEntrega({ entrega, total, onMarcar }: {
     ? (entrega.fecha_reclamada ? formatFechaCorta(entrega.fecha_reclamada) : "Reclamada")
     : (entrega.fecha_programada ? formatFechaCorta(entrega.fecha_programada) : "Sin fecha");
   return (
-    <button type="button" onClick={reclamada ? undefined : onMarcar} disabled={reclamada}
+    <button type="button" onClick={reclamada ? undefined : (e) => { e.preventDefault(); e.stopPropagation(); onMarcar(); }} disabled={reclamada}
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all active:scale-95 disabled:cursor-default"
       style={{ background: bg }}>
       {reclamada
