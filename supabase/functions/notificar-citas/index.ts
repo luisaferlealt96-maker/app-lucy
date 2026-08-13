@@ -203,13 +203,13 @@ serve(async (req) => {
 
       if (cita_id) {
         const { data: cita } = await sb.from("citas").select("*").eq("id", cita_id).single();
-        if (!cita?.lugar || !cita?.fecha_hora) {
+        if (!cita?.fecha_hora) {
           return new Response(JSON.stringify({ ok: true, tipo, enviados: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
         }
         esp   = cita.especialidad ?? "Consulta médica";
         fecha = fechaLarga(cita.fecha_hora);
         hora  = horaCorta(cita.fecha_hora);
-        lugar = cita.lugar;
+        lugar = cita.lugar ?? "por confirmar";
       } else if (examen_id) {
         const { data: examen } = await sb.from("examenes").select("*").eq("id", examen_id).single();
         if (!examen?.lugar || !examen?.hora || !examen?.fecha_solicitud) {

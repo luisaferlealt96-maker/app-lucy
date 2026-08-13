@@ -176,6 +176,11 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     setShowEdit(false);
     await cargar();
     setTimeout(() => setSavedEdit(false), 2000);
+
+    if (tieneFechaCompleta && cita.estado === "por_agendar") {
+      const supabaseWA = createClient();
+      supabaseWA.functions.invoke("notificar-citas", { body: { tipo: "nueva_cita", cita_id: id } }).catch(() => {});
+    }
   };
 
   const { fecha, hora } = (cita?.fecha_hora)

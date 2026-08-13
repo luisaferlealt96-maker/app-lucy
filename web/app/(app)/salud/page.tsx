@@ -58,6 +58,16 @@ export default function SaludPage() {
 
   const edad = calcularEdad(abuela?.fecha_nacimiento ?? null);
 
+  // Tab móvil — persistido en sessionStorage para sobrevivir navegación
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("salud_tab") ?? "citas";
+    return "citas";
+  });
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    sessionStorage.setItem("salud_tab", val);
+  };
+
   // Search
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -148,18 +158,19 @@ export default function SaludPage() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { icon: Calendar,     label: "Citas",        value: loading ? "–" : citasActivas.length.toString() },
-              { icon: Pill,         label: "Medicamentos", value: loading ? "–" : medsActivos.length.toString() },
-              { icon: FlaskConical, label: "Exámenes",     value: loading ? "–" : examenes.length.toString() },
-            ].map(({ icon: Icon, label, value }, i) => (
-              <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
-                className="bg-white/50 rounded-xl p-3 flex items-center gap-2">
+              { icon: Calendar,     label: "Citas",        value: loading ? "–" : citasActivas.length.toString(),  tab: "citas" },
+              { icon: Pill,         label: "Medicamentos", value: loading ? "–" : medsActivos.length.toString(),   tab: "medicamentos" },
+              { icon: FlaskConical, label: "Exámenes",     value: loading ? "–" : examenes.length.toString(),      tab: "examenes" },
+            ].map(({ icon: Icon, label, value, tab }, i) => (
+              <motion.button key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
+                onClick={() => handleTabChange(tab)}
+                className="bg-white/50 rounded-xl p-3 flex items-center gap-2 active:scale-95 transition-transform text-left">
                 <Icon size={16} color="#C0546A" strokeWidth={2} className="shrink-0" />
                 <div>
                   <p className="text-xl font-extrabold text-foreground leading-none">{value}</p>
                   <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{label}</p>
                 </div>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </motion.div>
@@ -181,7 +192,7 @@ export default function SaludPage() {
         </div>
 
         <div className="px-4 pt-4">
-          <Tabs defaultValue="citas">
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="w-full bg-secondary rounded-xl mb-4 h-10">
               <TabsTrigger value="citas" className="flex-1 rounded-lg text-xs font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
                 <Calendar size={13} className="mr-1" />Citas
