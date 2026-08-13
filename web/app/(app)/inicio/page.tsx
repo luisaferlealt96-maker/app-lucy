@@ -120,7 +120,7 @@ export default function InicioPage() {
                 <div className={cn(
                   "rounded-2xl p-5 flex flex-col gap-4 transition-transform",
                   pillar.bg,
-                  pillar.proximamente ? "opacity-60 cursor-default" : "hover:scale-[1.02] cursor-pointer",
+                  pillar.proximamente ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02] cursor-pointer",
                 )}>
                   <div className="flex items-center justify-between">
                     <div className="w-11 h-11 rounded-xl bg-white/50 flex items-center justify-center">
@@ -167,6 +167,7 @@ export default function InicioPage() {
                 : citas.length === 0
                   ? (
                     <div className="col-span-2 bg-card rounded-2xl p-6 border border-border text-center">
+                      <p className="text-3xl mb-2">📅</p>
                       <p className="text-sm text-muted-foreground">Sin citas próximas agendadas</p>
                       <Link href="/salud/nueva-cita" className="text-sm font-semibold text-primary mt-2 inline-block">
                         + Agregar cita
@@ -239,6 +240,11 @@ export default function InicioPage() {
                       </div>
                     </div>
                   ))}
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <Link href="/configuracion" className="flex items-center justify-between text-xs font-semibold text-primary hover:opacity-80 transition-opacity">
+                      Gestionar familia <ChevronRight size={12} />
+                    </Link>
+                  </div>
                 </div>
               )
             }
@@ -254,7 +260,7 @@ export default function InicioPage() {
               ].map(item => (
                 <Link key={item.href} href={item.href}>
                   <div
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:opacity-80 transition-opacity cursor-pointer"
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer"
                     style={{ background: item.bg }}
                   >
                     <span className="text-xs font-semibold" style={{ color: item.color }}>{item.label}</span>
@@ -318,6 +324,7 @@ export default function InicioPage() {
             : citas.length === 0
               ? (
                 <div className="bg-card rounded-2xl p-5 border border-border text-center">
+                  <p className="text-3xl mb-2">📅</p>
                   <p className="text-sm text-muted-foreground">Sin citas próximas</p>
                   <Link href="/salud/nueva-cita" className="text-sm font-semibold text-primary mt-2 inline-block">
                     + Agregar cita

@@ -6,6 +6,7 @@ import {
   Settings, User, Phone, Check, X, Plus, Pencil, Shield,
   ChevronRight, UserCheck, UserX, Mail, Send, Link2, Link2Off, LogOut, Trash2, AlertTriangle,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import type { MiembroFamilia, Rol } from "@/lib/supabase/types";
@@ -198,8 +199,14 @@ export default function ConfiguracionPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center pt-20">
-          <div className="w-8 h-8 rounded-full border-2 border-[#9B8EC4] border-t-transparent animate-spin" />
+        <div className="flex flex-col gap-4 pt-2">
+          <Skeleton className="h-5 w-24 rounded-lg" />
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-5 w-32 rounded-lg mt-2" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-16 rounded-2xl" />
+            <Skeleton className="h-16 rounded-2xl" />
+          </div>
         </div>
       ) : (
         <>

@@ -67,6 +67,7 @@ export default function SaludPage() {
     setActiveTab(val);
     sessionStorage.setItem("salud_tab", val);
   };
+  const [kanbanBoard, setKanbanBoard] = useState<"citas" | "medicamentos" | "examenes" | "autorizaciones">("citas");
 
   // Search
   const [searchOpen, setSearchOpen] = useState(false);
@@ -319,12 +320,14 @@ export default function SaludPage() {
           className="grid grid-cols-3 gap-4 mb-5 shrink-0"
         >
           {[
-            { icon: Calendar,     label: "Citas activas",        value: loading ? "–" : citasActivas.length.toString(),  accent: "#C0546A", bg: "#F2C5CE" },
-            { icon: Pill,         label: "Medicamentos activos", value: loading ? "–" : medsActivos.length.toString(),   accent: "#2E7D6A", bg: "#B8E2D4" },
-            { icon: Activity,     label: "Procedimientos pendientes", value: loading ? "–" : examenes.length.toString(),      accent: "#9B8EC4", bg: "#EDE9F7" },
-          ].map(({ icon: Icon, label, value, accent, bg }, i) => (
-            <motion.div key={label} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 + i * 0.06 }}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-center gap-4">
+            { icon: Calendar,     label: "Citas activas",            value: loading ? "–" : citasActivas.length.toString(), accent: "#C0546A", bg: "#F2C5CE", board: "citas"          as const },
+            { icon: Pill,         label: "Medicamentos activos",     value: loading ? "–" : medsActivos.length.toString(),  accent: "#2E7D6A", bg: "#B8E2D4", board: "medicamentos"   as const },
+            { icon: Activity,     label: "Procedimientos pendientes", value: loading ? "–" : examenes.length.toString(),    accent: "#9B8EC4", bg: "#EDE9F7", board: "examenes"        as const },
+          ].map(({ icon: Icon, label, value, accent, bg, board }, i) => (
+            <motion.button key={label} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 + i * 0.06 }}
+              onClick={() => setKanbanBoard(board)}
+              className="bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-center gap-4 text-left transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+              style={kanbanBoard === board ? { outline: `2px solid ${accent}40` } : {}}>
               <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
                 <Icon size={20} color={accent} strokeWidth={2} />
               </div>
@@ -332,7 +335,7 @@ export default function SaludPage() {
                 <p className="text-2xl font-extrabold leading-none" style={{ color: accent }}>{value}</p>
                 <p className="text-xs text-muted-foreground font-medium mt-0.5">{label}</p>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </motion.div>
 
@@ -363,6 +366,8 @@ export default function SaludPage() {
             nuevoExHref={nuevoExHref}
             nuevoAuthHref={nuevoAuthHref}
             marcarEntregaReclamada={marcarEntregaReclamada}
+            activeBoard={kanbanBoard}
+            onBoardChange={setKanbanBoard}
           />
         </motion.div>
       {/* Modal edición datos clínicos */}
@@ -483,6 +488,7 @@ function KanbanBoardView({
   loading, refresh,
   nuevaCitaHref, nuevoMedHref, nuevoExHref, nuevoAuthHref,
   marcarEntregaReclamada,
+  activeBoard, onBoardChange,
 }: {
   citas: Cita[]; citasPendienteAgendar: Cita[]; citasAgendadas: Cita[]; citasCompletadas: Cita[];
   medicamentos: Medicamento[]; medsActivos: Medicamento[]; medsPorReclamar: Medicamento[]; medsConEntregas: Medicamento[]; examenes: Examen[];
@@ -491,8 +497,9 @@ function KanbanBoardView({
   loading: boolean; refresh: () => void;
   nuevaCitaHref: string; nuevoMedHref: string; nuevoExHref: string; nuevoAuthHref: string;
   marcarEntregaReclamada: (id: string) => void;
+  activeBoard: "citas" | "medicamentos" | "examenes" | "autorizaciones";
+  onBoardChange: (b: "citas" | "medicamentos" | "examenes" | "autorizaciones") => void;
 }) {
-  const [activeBoard, setActiveBoard] = useState<"citas" | "medicamentos" | "examenes" | "autorizaciones">("citas");
   const [citasView, setCitasView] = useState<"kanban" | "calendario">("kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
@@ -682,7 +689,7 @@ function KanbanBoardView({
               return (
                 <button
                   key={b.id}
-                  onClick={() => setActiveBoard(b.id)}
+                  onClick={() => onBoardChange(b.id)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
                   style={active ? { background: b.bg, color: b.accent } : { color: "var(--muted-foreground)" }}
                 >
