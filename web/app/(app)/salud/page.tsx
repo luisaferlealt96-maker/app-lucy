@@ -707,7 +707,7 @@ function KanbanBoardView({
             {(activeBoard !== "citas" || citasView === "kanban") && (
               <>
                 <div className="w-px h-5 bg-border mx-1" />
-                <p className="text-[11px] text-muted-foreground px-2 select-none">Arrastra para mover</p>
+                <p className="hidden xl:block text-[11px] text-muted-foreground px-2 select-none">Arrastra para mover</p>
               </>
             )}
           </div>

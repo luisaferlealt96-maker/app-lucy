@@ -282,7 +282,7 @@ export default function InicioPage() {
               <div className={cn(
                 "rounded-2xl p-4 flex flex-col gap-3 transition-transform",
                 pillar.bg,
-                pillar.proximamente ? "opacity-60" : "active:scale-[0.97]",
+                pillar.proximamente ? "opacity-70" : "active:scale-[0.97]",
               )}>
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center">
@@ -295,7 +295,13 @@ export default function InicioPage() {
                 </div>
                 <div>
                   <p className="font-bold text-[15px]" style={{ color: pillar.accentHex }}>{pillar.label}</p>
-                  <p className="text-[13px] mt-0.5 font-semibold" style={{ color: pillar.accentHex }}>{pillar.stat}</p>
+                  {pillar.proximamente ? (
+                    <span className="inline-flex items-center gap-1 bg-white/60 rounded-full px-2 py-0.5 mt-0.5">
+                      <span className="text-[11px] font-bold" style={{ color: pillar.accentHex }}>Próximamente</span>
+                    </span>
+                  ) : (
+                    <p className="text-[13px] mt-0.5 font-semibold" style={{ color: pillar.accentHex }}>{pillar.stat}</p>
+                  )}
                 </div>
               </div>
             );
