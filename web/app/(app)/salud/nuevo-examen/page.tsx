@@ -391,7 +391,15 @@ function NuevoExamenContent() {
             onValueChange={v => set("acompanante_id", v === "none" ? "" : v)}
           >
             <SelectTrigger className="rounded-xl border-border bg-card h-12">
-              <SelectValue placeholder="Sin acompañante asignado" />
+              {(() => {
+                const acompanantes = miembros.filter(m => m.rol !== "abuela");
+                const m = form.acompanante_id ? acompanantes.find(x => x.id === form.acompanante_id) : null;
+                return (
+                  <span className={`flex-1 text-left text-sm truncate${m ? "" : " text-muted-foreground"}`}>
+                    {m ? `${m.emoji ?? ""} ${m.nombre}`.trim() : "Sin acompañante asignado"}
+                  </span>
+                );
+              })()}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sin acompañante</SelectItem>

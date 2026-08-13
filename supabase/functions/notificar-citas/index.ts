@@ -212,13 +212,13 @@ serve(async (req) => {
         lugar = cita.lugar ?? "por confirmar";
       } else if (examen_id) {
         const { data: examen } = await sb.from("examenes").select("*").eq("id", examen_id).single();
-        if (!examen?.lugar || !examen?.hora || !examen?.fecha_solicitud) {
+        if (!examen?.fecha_solicitud) {
           return new Response(JSON.stringify({ ok: true, tipo, enviados: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
         }
         esp   = examen.nombre;
         fecha = fechaCorta(examen.fecha_solicitud);
-        hora  = formatHora(examen.hora);
-        lugar = examen.lugar;
+        hora  = examen.hora ? formatHora(examen.hora) : "por confirmar";
+        lugar = examen.lugar ?? "por confirmar";
       } else {
         return new Response(JSON.stringify({ error: "falta cita_id o examen_id" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }

@@ -175,6 +175,10 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     setShowEdit(false);
     await cargar();
     setTimeout(() => setSavedEdit(false), 2000);
+
+    if (editForm.fecha_solicitud && !examen.fecha_solicitud) {
+      createClient().functions.invoke("notificar-citas", { body: { tipo: "nueva_cita", examen_id: id } }).catch(() => {});
+    }
   };
 
   if (loading) {
@@ -525,7 +529,15 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                   onValueChange={v => setEditForm(f => ({ ...f, acompanante_id: v === "none" ? null : v }))}
                 >
                   <SelectTrigger className="rounded-xl border-border bg-card h-12">
-                    <SelectValue placeholder="Sin acompañante" />
+                    {(() => {
+                      const acompanantes = miembros.filter(m => m.rol !== "abuela");
+                      const m = editForm.acompanante_id ? acompanantes.find(x => x.id === editForm.acompanante_id) : null;
+                      return (
+                        <span className={`flex-1 text-left text-sm truncate${m ? "" : " text-muted-foreground"}`}>
+                          {m ? `${m.emoji ?? ""} ${m.nombre}`.trim() : "Sin acompañante"}
+                        </span>
+                      );
+                    })()}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin acompañante</SelectItem>
