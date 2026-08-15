@@ -248,7 +248,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ── RECORDATORIO MANUAL DE CITA: 3 mensajes diferenciados (plantillas en revisión) ──
+    // ── RECORDATORIO MANUAL DE CITA: una sola plantilla con fecha real ──
     if (tipo === "manual" && cita_id) {
       const [{ data: cita }, { data: todosLos }] = await Promise.all([
         sb.from("citas").select("*, acompanante:acompanante_id(*)").eq("id", cita_id).single(),
@@ -258,42 +258,23 @@ serve(async (req) => {
       if (!cita) return new Response(JSON.stringify({ error: "cita no encontrada" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
 
       const todos    = todosLos ?? [];
-      const lucy     = todos.find((m: { rol: string }) => m.rol === "abuela");
       const acomp    = cita.acompanante;
-      const familia  = todos.filter((m: { rol: string; id: string; telefono: string | null }) =>
-        m.rol !== "abuela" && m.id !== cita.acompanante_id && m.telefono);
+      const destinatarios = todos.filter((m: { telefono: string | null }) => m.telefono);
 
       const lugar    = cita.lugar ?? "por confirmar";
       const lugarUrl = encodeURIComponent(lugar);
       const fecha    = cita.fecha_hora ? fechaLarga(cita.fecha_hora) : "por agendar";
       const hora     = cita.fecha_hora ? horaCorta(cita.fecha_hora) : "–";
-      const esp      = cita.especialidad ?? "Consulta médica";
+      const esp      = cita.nombre ?? cita.especialidad ?? "Consulta médica";
       const acompNom = acomp?.nombre ?? "sin asignar";
       let enviados   = 0;
 
-      if (acomp?.telefono) {
-        await enviarWA(acomp.telefono, "cita_lucy_recordatorio", [
-          { name: "nombre",       value: acomp.nombre },
-          { name: "especialidad", value: esp },
-          { name: "fecha",        value: fecha },
-          { name: "hora",         value: hora },
-          { name: "lugar",        value: lugar },
-        ], lugarUrl) && enviados++;
-      }
-      if (lucy?.telefono) {
-        await enviarWA(lucy.telefono, "cita_lucy_paciente", [
-          { name: "especialidad", value: esp },
-          { name: "hora",         value: hora },
-          { name: "lugar",        value: lugar },
-          { name: "acompanante",  value: acompNom },
-        ], lugarUrl) && enviados++;
-      }
-      for (const m of familia) {
-        await enviarWA(m.telefono!, "cita_lucy_familia", [
+      for (const m of destinatarios) {
+        await enviarWA(m.telefono!, "cita_lucy_recordatorio_manual", [
           { name: "nombre",       value: m.nombre },
-          { name: "especialidad", value: esp },
           { name: "fecha",        value: fecha },
           { name: "hora",         value: hora },
+          { name: "especialidad", value: esp },
           { name: "lugar",        value: lugar },
           { name: "acompanante",  value: acompNom },
         ], lugarUrl) && enviados++;
@@ -302,7 +283,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ── MANUAL EXAMEN / PROCEDIMIENTO: 3 mensajes reutilizando plantillas de cita ──
+    // ── MANUAL EXAMEN / PROCEDIMIENTO ────────────────────────────────────
     if (tipo === "manual_examen" && examen_id) {
       const [{ data: examen }, { data: todosLos }] = await Promise.all([
         sb.from("examenes").select("*, acompanante:acompanante_id(*)").eq("id", examen_id).single(),
@@ -311,45 +292,21 @@ serve(async (req) => {
 
       if (!examen) return new Response(JSON.stringify({ error: "examen no encontrado" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
 
-      const todos    = todosLos ?? [];
-      const lucy     = todos.find((m: { rol: string }) => m.rol === "abuela");
       const acomp    = examen.acompanante;
-      const familia  = todos.filter((m: { rol: string; id: string; telefono: string | null }) =>
-        m.rol !== "abuela" && m.id !== examen.acompanante_id && m.telefono);
-
+      const destinatarios = (todosLos ?? []).filter((m: { telefono: string | null }) => m.telefono);
       const lugar    = examen.lugar ?? "por confirmar";
       const lugarUrl = encodeURIComponent(lugar);
       const fecha    = examen.fecha_solicitud ? fechaCorta(examen.fecha_solicitud) : "por confirmar";
       const hora     = examen.hora ? formatHora(examen.hora) : "por confirmar";
-      const nombre   = examen.nombre;
       const acompNom = acomp?.nombre ?? "sin asignar";
       let enviados   = 0;
 
-      if (acomp?.telefono) {
-        await enviarWA(acomp.telefono, "cita_lucy_recordatorio", [
-          { name: "nombre",       value: acomp.nombre },
-          { name: "especialidad", value: nombre },
-          { name: "fecha",        value: fecha },
-          { name: "hora",         value: hora },
-          { name: "lugar",        value: lugar },
-        ], lugarUrl) && enviados++;
-      }
-
-      if (lucy?.telefono) {
-        await enviarWA(lucy.telefono, "cita_lucy_paciente", [
-          { name: "especialidad", value: nombre },
-          { name: "hora",         value: hora },
-          { name: "lugar",        value: lugar },
-          { name: "acompanante",  value: acompNom },
-        ], lugarUrl) && enviados++;
-      }
-
-      for (const m of familia) {
-        await enviarWA(m.telefono!, "cita_lucy_familia", [
+      for (const m of destinatarios) {
+        await enviarWA(m.telefono!, "cita_lucy_recordatorio_manual", [
           { name: "nombre",       value: m.nombre },
-          { name: "especialidad", value: nombre },
           { name: "fecha",        value: fecha },
           { name: "hora",         value: hora },
+          { name: "especialidad", value: examen.nombre },
           { name: "lugar",        value: lugar },
           { name: "acompanante",  value: acompNom },
         ], lugarUrl) && enviados++;
