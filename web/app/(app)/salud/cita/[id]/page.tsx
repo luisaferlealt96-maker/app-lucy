@@ -476,9 +476,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
 
             {/* Pedir reporte post-cita — cita pasada sin notas */}
             {cita?.fecha_hora && new Date(cita.fecha_hora) < new Date() &&
-             cita.estado !== "completada" &&
-             !cita.notas_post && !cita.audio_post_url &&
-             cita.acompanante_id && (
+             !cita.notas_post && !cita.audio_post_url && (
               <button
                 onClick={handlePedirReporte}
                 disabled={enviandoReporte || reporteEnviado}
