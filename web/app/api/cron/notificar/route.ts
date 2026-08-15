@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const sanitize = (s: string) => s.replace(/[^\x20-\x7E]/g, "").trim();
 
-const TIPOS_VALIDOS = ["recordatorio", "autorizaciones", "resultados", "resumen_semanal"];
+const TIPOS_VALIDOS = ["recordatorio", "autorizaciones", "resultados", "resumen_semanal", "reporte_post_cita"];
 
 export async function GET(request: NextRequest) {
   // Vercel envía Authorization: Bearer <CRON_SECRET> en cada llamada de cron

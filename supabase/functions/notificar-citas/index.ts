@@ -497,6 +497,59 @@ serve(async (req) => {
       );
     }
 
+    // ── CRON: pedir reporte automático 24h después de la cita ───────────
+    if (tipo === "reporte_post_cita") {
+      // Ventana: citas con fecha entre 48h y 20h atrás (captura citas de "ayer")
+      const hace48h = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+      const hace20h = new Date(Date.now() - 20 * 3600 * 1000).toISOString();
+
+      const { data: citas } = await sb.from("citas")
+        .select("*, acompanante:acompanante_id(*)")
+        .not("acompanante_id", "is", null)
+        .not("fecha_hora", "is", null)
+        .gte("fecha_hora", hace48h)
+        .lte("fecha_hora", hace20h)
+        .eq("recordatorio_post_enviado", false)
+        .in("estado", ["pendiente", "por_agendar"]);
+
+      let enviados = 0;
+      for (const c of citas ?? []) {
+        const acomp = c.acompanante;
+        if (!acomp?.telefono) continue;
+        const esp = c.nombre ?? c.especialidad ?? "Consulta médica";
+        const ok = await enviarWA(acomp.telefono, "cita_lucy_reporte", [
+          { name: "nombre",       value: acomp.nombre },
+          { name: "especialidad", value: esp },
+        ], c.id);
+        if (ok) {
+          await sb.from("citas").update({ recordatorio_post_enviado: true }).eq("id", c.id);
+          enviados++;
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ── MANUAL: pedir reporte de una cita específica ────────────────────
+    if (tipo === "pedir_reporte" && cita_id) {
+      const { data: cita } = await sb.from("citas")
+        .select("*, acompanante:acompanante_id(*)")
+        .eq("id", cita_id)
+        .single();
+
+      if (!cita?.acompanante?.telefono) {
+        return new Response(JSON.stringify({ ok: true, tipo, enviados: 0, razon: "sin acompañante con teléfono" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+
+      const acomp = cita.acompanante;
+      const esp = cita.nombre ?? cita.especialidad ?? "Consulta médica";
+      const ok = await enviarWA(acomp.telefono, "cita_lucy_reporte", [
+        { name: "nombre",       value: acomp.nombre },
+        { name: "especialidad", value: esp },
+      ], cita_id);
+
+      return new Response(JSON.stringify({ ok: true, tipo, enviados: ok ? 1 : 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ── RECORDATORIO MANUAL: pedir estado del trámite de autorización ────
     if (tipo === "recordatorio_tramite" && cita_id) {
       const [{ data: cita }, { data: auths }, { data: admins }] = await Promise.all([

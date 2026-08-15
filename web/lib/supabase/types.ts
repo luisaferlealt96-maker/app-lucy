@@ -36,6 +36,7 @@ export interface Cita {
   notas_post: string | null;
   estado: EstadoCita;
   recordatorio_enviado: boolean;
+  recordatorio_post_enviado: boolean;
   audio_url: string | null;
   audio_post_url: string | null;
   lugar_detalle: string | null;

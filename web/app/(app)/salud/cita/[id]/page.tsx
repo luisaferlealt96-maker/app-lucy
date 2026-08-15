@@ -53,6 +53,10 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
   const [enviandoTramite, setEnviandoTramite] = useState(false);
   const [tramiteEnviado, setTramiteEnviado] = useState(false);
 
+  // Pedir reporte post-cita
+  const [enviandoReporte, setEnviandoReporte] = useState(false);
+  const [reporteEnviado, setReporteEnviado] = useState(false);
+
   // Editar datos de la cita
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -149,6 +153,18 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     setEnviandoWA(false);
     setWaEnviado(true);
     setTimeout(() => setWaEnviado(false), 3000);
+  };
+
+  const handlePedirReporte = async () => {
+    if (!cita) return;
+    setEnviandoReporte(true);
+    const supabase = createClient();
+    await supabase.functions.invoke("notificar-citas", {
+      body: { tipo: "pedir_reporte", cita_id: cita.id },
+    });
+    setEnviandoReporte(false);
+    setReporteEnviado(true);
+    setTimeout(() => setReporteEnviado(false), 4000);
   };
 
   const handlePedirEstadoTramite = async () => {
@@ -454,6 +470,32 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                   </>
                 ) : (
                   <><MessageSquare size={16} strokeWidth={2.5} /> Enviar recordatorio por WhatsApp</>
+                )}
+              </button>
+            )}
+
+            {/* Pedir reporte post-cita — cita pasada sin notas */}
+            {cita?.fecha_hora && new Date(cita.fecha_hora) < new Date() &&
+             cita.estado !== "completada" &&
+             !cita.notas_post && !cita.audio_post_url &&
+             cita.acompanante_id && (
+              <button
+                onClick={handlePedirReporte}
+                disabled={enviandoReporte || reporteEnviado}
+                className="w-full h-12 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-70"
+                style={reporteEnviado
+                  ? { background: "#22c55e", color: "#fff" }
+                  : { background: "#FFF3E0", color: "#e65100", border: "1.5px solid #FFB74D" }}
+              >
+                {reporteEnviado ? (
+                  <><Check size={16} strokeWidth={2.5} /> Reporte solicitado</>
+                ) : enviandoReporte ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-orange-300 border-t-orange-600 animate-spin" />
+                    Enviando…
+                  </>
+                ) : (
+                  <><MessageSquare size={16} strokeWidth={2.5} /> Pedir reporte de la cita al acompañante</>
                 )}
               </button>
             )}
