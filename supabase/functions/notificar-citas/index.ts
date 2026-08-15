@@ -258,8 +258,9 @@ serve(async (req) => {
       if (!cita) return new Response(JSON.stringify({ error: "cita no encontrada" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
 
       const todos    = todosLos ?? [];
+      const lucy     = todos.find((m: { rol: string }) => m.rol === "abuela");
       const acomp    = cita.acompanante;
-      const destinatarios = todos.filter((m: { telefono: string | null }) => m.telefono);
+      const familia  = todos.filter((m: { rol: string; telefono: string | null }) => m.rol !== "abuela" && m.telefono);
 
       const lugar    = cita.lugar ?? "por confirmar";
       const lugarUrl = encodeURIComponent(lugar);
@@ -269,7 +270,19 @@ serve(async (req) => {
       const acompNom = acomp?.nombre ?? "sin asignar";
       let enviados   = 0;
 
-      for (const m of destinatarios) {
+      // Lucy recibe su mensaje personalizado
+      if (lucy?.telefono) {
+        await enviarWA(lucy.telefono, "cita_lucy_paciente_manual", [
+          { name: "fecha",        value: fecha },
+          { name: "especialidad", value: esp },
+          { name: "hora",         value: hora },
+          { name: "lugar",        value: lugar },
+          { name: "acompanante",  value: acompNom },
+        ], lugarUrl) && enviados++;
+      }
+
+      // El resto recibe el recordatorio con su nombre
+      for (const m of familia) {
         await enviarWA(m.telefono!, "cita_lucy_recordatorio_manual", [
           { name: "nombre",       value: m.nombre },
           { name: "fecha",        value: fecha },
@@ -279,6 +292,7 @@ serve(async (req) => {
           { name: "acompanante",  value: acompNom },
         ], lugarUrl) && enviados++;
       }
+
       await sb.from("citas").update({ recordatorio_enviado: true }).eq("id", cita_id);
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
