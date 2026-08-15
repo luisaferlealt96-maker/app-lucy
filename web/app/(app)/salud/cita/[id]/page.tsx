@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, Calendar, Clock, MapPin, User, FileText, Check,
-  Edit3, Upload, Trash2, ExternalLink, MessageSquare, X, Pencil, Mic,
+  Edit3, Upload, Trash2, ExternalLink, MessageSquare, X, Pencil, Mic, Bell,
 } from "lucide-react";
+import { VoiceRecorder } from "@/components/ui/voice-recorder";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,9 +43,20 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
   const [enviandoWA, setEnviandoWA] = useState(false);
   const [waEnviado, setWaEnviado] = useState(false);
 
+  // Voz en notas post-cita
+  const [notasMode, setNotasMode] = useState<"texto" | "voz">("texto");
+  const [audioPostBlob, setAudioPostBlob] = useState<Blob | null>(null);
+  const [audioPostSignedUrl, setAudioPostSignedUrl] = useState<string | null>(null);
+
+  // Recordatorio de trámite
+  const [authsVinculadas, setAuthsVinculadas] = useState<AutorizacionEPS[]>([]);
+  const [enviandoTramite, setEnviandoTramite] = useState(false);
+  const [tramiteEnviado, setTramiteEnviado] = useState(false);
+
   // Editar datos de la cita
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
+    nombre: "",
     especialidad: "",
     medico: "",
     fecha: "",
@@ -69,7 +81,9 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
       supabase.from("autorizaciones_eps").select("*").eq("cita_id", id),
     ]);
     setCita(data);
-    const authAprobada = (auths ?? []).find(a => a.estado === "autorizada" && a.numero_autorizacion);
+    const allAuths = auths ?? [];
+    setAuthsVinculadas(allAuths);
+    const authAprobada = allAuths.find(a => a.estado === "autorizada" && a.numero_autorizacion);
     setAuthVinculada(authAprobada ?? null);
     setNotas(data?.notas_post ?? "");
     setMiembros(mbs ?? []);
@@ -77,9 +91,14 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
       const url = await getUrlDocumento(data.audio_url);
       setAudioSignedUrl(url);
     }
+    if (data?.audio_post_url) {
+      const url = await getUrlDocumento(data.audio_post_url);
+      setAudioPostSignedUrl(url);
+    }
     if (data) {
       const fh = data.fecha_hora ? new Date(data.fecha_hora) : null;
       setEditForm({
+        nombre: data.nombre ?? "",
         especialidad: data.especialidad ?? "",
         medico: data.medico ?? "",
         fecha: fh ? fh.toISOString().split("T")[0] : "",
@@ -132,6 +151,18 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     setTimeout(() => setWaEnviado(false), 3000);
   };
 
+  const handlePedirEstadoTramite = async () => {
+    if (!cita) return;
+    setEnviandoTramite(true);
+    const supabase = createClient();
+    await supabase.functions.invoke("notificar-citas", {
+      body: { tipo: "recordatorio_tramite", cita_id: cita.id },
+    });
+    setEnviandoTramite(false);
+    setTramiteEnviado(true);
+    setTimeout(() => setTramiteEnviado(false), 4000);
+  };
+
   const handleEliminar = async () => {
     if (!cita) return;
     setDeleting(true);
@@ -145,13 +176,37 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     if (!cita) return;
     setSaving(true);
     const supabase = createClient();
+
+    let audio_post_url: string | null = cita.audio_post_url ?? null;
+    if (notasMode === "voz" && audioPostBlob) {
+      const ext = audioPostBlob.type.includes("mp4") ? "m4a" : "webm";
+      const path = `notas-post/${Date.now()}.${ext}`;
+      const { data: uploaded } = await supabase.storage
+        .from("audios-salud")
+        .upload(path, audioPostBlob, { contentType: audioPostBlob.type });
+      if (uploaded) {
+        const { data: { publicUrl } } = supabase.storage
+          .from("audios-salud")
+          .getPublicUrl(uploaded.path);
+        audio_post_url = publicUrl;
+      }
+    }
+
     await supabase.from("citas")
-      .update({ notas_post: notas, estado: "completada" })
+      .update({
+        notas_post: notasMode === "texto" ? (notas || null) : null,
+        audio_post_url,
+        estado: "completada",
+      })
       .eq("id", id);
     setSaving(false);
     setSaved(true);
     setEditandoNotas(false);
-    setCita(c => c ? { ...c, notas_post: notas, estado: "completada" } : c);
+    setCita(c => c ? { ...c, notas_post: notasMode === "texto" ? notas : null, audio_post_url, estado: "completada" } : c);
+    if (audio_post_url) {
+      const signed = await getUrlDocumento(audio_post_url);
+      setAudioPostSignedUrl(signed);
+    }
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -161,6 +216,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     const supabase = createClient();
     const tieneFechaCompleta = editForm.fecha && editForm.hora;
     await supabase.from("citas").update({
+      nombre: editForm.nombre || null,
       especialidad: editForm.especialidad,
       medico: editForm.medico || null,
       lugar: editForm.lugar || null,
@@ -214,8 +270,11 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 {cita?.especialidad?.toUpperCase()}
               </p>
               <h1 className="text-xl font-extrabold text-foreground mt-0.5">
-                {cita?.paciente?.nombre}
+                {cita?.nombre || cita?.paciente?.nombre}
               </h1>
+              {cita?.nombre && (
+                <p className="text-xs text-muted-foreground mt-0.5">{cita.paciente?.nombre}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <button
@@ -399,6 +458,29 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
               </button>
             )}
 
+            {/* Recordatorio de trámite — solo cuando hay auth en tramite */}
+            {authsVinculadas.some(a => a.estado === "en_tramite") && (
+              <button
+                onClick={handlePedirEstadoTramite}
+                disabled={enviandoTramite || tramiteEnviado}
+                className="w-full h-12 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-70"
+                style={tramiteEnviado
+                  ? { background: "#22c55e", color: "#fff" }
+                  : { background: "#EDE7F6", color: "#6A3EA1" }}
+              >
+                {tramiteEnviado ? (
+                  <><Check size={16} strokeWidth={2.5} /> Recordatorio enviado</>
+                ) : enviandoTramite ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-purple-300 border-t-purple-700 animate-spin" />
+                    Enviando…
+                  </>
+                ) : (
+                  <><Bell size={16} strokeWidth={2.5} /> Pedir estado del trámite a la EPS</>
+                )}
+              </button>
+            )}
+
             {/* Notas previas */}
             {cita?.notas_pre && (
               <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
@@ -416,25 +498,54 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 </p>
                 {!editandoNotas && (
                   <button
-                    onClick={() => setEditandoNotas(true)}
+                    onClick={() => { setEditandoNotas(true); setNotasMode("texto"); setAudioPostBlob(null); }}
                     className="flex items-center gap-1 text-xs text-primary font-semibold"
                   >
                     <Edit3 size={12} />
-                    {cita?.notas_post ? "Editar" : "Agregar"}
+                    {cita?.notas_post || cita?.audio_post_url ? "Editar" : "Agregar"}
                   </button>
                 )}
               </div>
 
               {editandoNotas ? (
                 <div className="flex flex-col gap-3">
-                  <Textarea
-                    value={notas}
-                    onChange={e => setNotas(e.target.value)}
-                    placeholder="¿De qué trató la cita? ¿Qué dijo el médico? ¿Qué sigue?"
-                    rows={4}
-                    className="rounded-xl border-border resize-none text-sm"
-                    autoFocus
-                  />
+                  {/* Toggle texto / voz */}
+                  <div className="flex rounded-lg overflow-hidden border border-border text-[11px] font-semibold self-start">
+                    <button
+                      type="button"
+                      onClick={() => { setNotasMode("texto"); setAudioPostBlob(null); }}
+                      className="px-3 py-1.5 transition-colors"
+                      style={notasMode === "texto"
+                        ? { background: "#9B8EC4", color: "#fff" }
+                        : { background: "transparent", color: "var(--muted-foreground)" }}
+                    >
+                      ✍️ Texto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setNotasMode("voz"); setNotas(""); }}
+                      className="px-3 py-1.5 transition-colors"
+                      style={notasMode === "voz"
+                        ? { background: "#9B8EC4", color: "#fff" }
+                        : { background: "transparent", color: "var(--muted-foreground)" }}
+                    >
+                      🎙️ Voz
+                    </button>
+                  </div>
+
+                  {notasMode === "texto" ? (
+                    <Textarea
+                      value={notas}
+                      onChange={e => setNotas(e.target.value)}
+                      placeholder="¿De qué trató la cita? ¿Qué dijo el médico? ¿Qué sigue?"
+                      rows={4}
+                      className="rounded-xl border-border resize-none text-sm"
+                      autoFocus
+                    />
+                  ) : (
+                    <VoiceRecorder onAudio={setAudioPostBlob} />
+                  )}
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditandoNotas(false)}
@@ -444,7 +555,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     </button>
                     <button
                       onClick={handleGuardarNotas}
-                      disabled={saving}
+                      disabled={saving || (notasMode === "voz" && !audioPostBlob)}
                       className="flex-1 h-10 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
                       style={{ background: "#9B8EC4" }}
                     >
@@ -452,12 +563,20 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     </button>
                   </div>
                 </div>
-              ) : cita?.notas_post ? (
-                <p className="text-sm text-foreground">{cita.notas_post}</p>
               ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  El acompañante puede escribir aquí qué pasó en la cita.
-                </p>
+                <>
+                  {cita?.notas_post ? (
+                    <p className="text-sm text-foreground">{cita.notas_post}</p>
+                  ) : audioPostSignedUrl ? (
+                    <div className="rounded-xl border p-3" style={{ background: "#F9F4FF", borderColor: "#9B8EC430" }}>
+                      <audio src={audioPostSignedUrl} controls className="w-full h-10" style={{ accentColor: "#9B8EC4" }} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      El acompañante puede escribir o grabar aquí qué pasó en la cita.
+                    </p>
+                  )}
+                </>
               )}
 
               {saved && (
@@ -536,6 +655,17 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                   style={{ background: "var(--secondary)" }}>
                   <X size={16} className="text-muted-foreground" />
                 </button>
+              </div>
+
+              {/* Nombre de la cita */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Nombre de la cita (opcional)</label>
+                <Input
+                  placeholder="Ej: Cita de control, Revisión de tensión…"
+                  value={editForm.nombre}
+                  onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))}
+                  className="rounded-xl border-border bg-card h-12"
+                />
               </div>
 
               {/* Especialidad */}

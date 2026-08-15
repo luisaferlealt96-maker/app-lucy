@@ -27,6 +27,7 @@ export interface Cita {
   id: string;
   paciente_id: string;
   acompanante_id: string | null;
+  nombre: string | null;
   especialidad: string;
   medico: string | null;
   lugar: string | null;
@@ -36,6 +37,7 @@ export interface Cita {
   estado: EstadoCita;
   recordatorio_enviado: boolean;
   audio_url: string | null;
+  audio_post_url: string | null;
   lugar_detalle: string | null;
   archivo_url: string | null;
   created_by: string | null;

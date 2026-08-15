@@ -497,6 +497,35 @@ serve(async (req) => {
       );
     }
 
+    // ── RECORDATORIO MANUAL: pedir estado del trámite de autorización ────
+    if (tipo === "recordatorio_tramite" && cita_id) {
+      const [{ data: cita }, { data: auths }, { data: admins }] = await Promise.all([
+        sb.from("citas").select("especialidad, nombre").eq("id", cita_id).single(),
+        sb.from("autorizaciones_eps").select("*").eq("cita_id", cita_id).eq("estado", "en_tramite"),
+        sb.from("miembros_familia").select("nombre, telefono, rol").eq("activo", true).not("telefono", "is", null),
+      ]);
+
+      if (!cita || !(auths ?? []).length) {
+        return new Response(JSON.stringify({ ok: true, tipo, enviados: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+
+      const receptores = ((admins ?? []) as { nombre: string; telefono: string; rol: string }[])
+        .filter(m => m.rol === "admin");
+      const descripcion = (auths![0].descripcion) || (cita.nombre ?? cita.especialidad ?? "la cita");
+      const diasHab = auths![0].fecha_envio_eps ? diasHabilesDesde(auths![0].fecha_envio_eps) : 0;
+
+      let enviados = 0;
+      for (const m of receptores) {
+        const ok = await enviarWA(m.telefono, "orden_lucy_tramite_demorado", [
+          { name: "nombre",       value: m.nombre },
+          { name: "dias_habiles", value: diasHab.toString() },
+          { name: "descripcion",  value: descripcion },
+        ]);
+        if (ok) enviados++;
+      }
+      return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "tipo no reconocido" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (err) {
     console.error(err);

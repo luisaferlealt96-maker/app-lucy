@@ -50,6 +50,7 @@ function NuevaCitaContent() {
   const [form, setForm] = useState({
     paciente_id: params.get("paciente") ?? "",
     acompanante_id: "",
+    nombre: "",
     especialidad: "",
     medico: "",
     lugar: "",
@@ -114,6 +115,7 @@ function NuevaCitaContent() {
     const { data: inserted } = await supabase.from("citas").insert({
       paciente_id: form.paciente_id,
       acompanante_id: form.acompanante_id || null,
+      nombre: form.nombre || null,
       especialidad: form.especialidad,
       medico: form.medico || null,
       lugar: tieneFecha ? (form.lugar || null) : null,
@@ -235,6 +237,17 @@ function NuevaCitaContent() {
               La cita quedará registrada como <strong>pendiente por agendar</strong>. Cuando tengas los resultados de los otros procedimientos, puedes asignarle la fecha.
             </motion.p>
           )}
+        </div>
+
+        {/* Nombre de la cita */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-bold text-foreground uppercase tracking-wide">Nombre de la cita (opcional)</label>
+          <Input
+            placeholder="Ej: Cita de control, Revisión de tensión…"
+            value={form.nombre}
+            onChange={e => set("nombre", e.target.value)}
+            className="rounded-xl border-border bg-card h-12"
+          />
         </div>
 
         {/* Especialidad */}
