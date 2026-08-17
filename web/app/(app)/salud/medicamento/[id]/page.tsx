@@ -4,7 +4,7 @@ import { use, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, Pill, FileText, Upload, Trash2, ExternalLink,
-  Check, Package, Circle, X, Pencil, Plus, Minus, Calendar,
+  Check, Package, Circle, X, Pencil, Plus, Minus, Calendar, RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,9 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
   const [loading, setLoading] = useState(true);
   const [uploadingFormula, setUploadingFormula] = useState(false);
   const [togglingActivo, setTogglingActivo] = useState(false);
+
+  // Deshacer entrega
+  const [confirmDeshacerId, setConfirmDeshacerId] = useState<string | null>(null);
 
   // Editar fecha de entrega inline
   const [editandoEntregaId, setEditandoEntregaId] = useState<string | null>(null);
@@ -119,6 +122,15 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
     await supabase.from("entregas_medicamento")
       .update({ estado: "reclamada", fecha_reclamada: hoy })
       .eq("id", entregaId);
+    await cargar();
+  };
+
+  const deshacerEntrega = async (entregaId: string) => {
+    const supabase = createClient();
+    await supabase.from("entregas_medicamento")
+      .update({ estado: "pendiente", fecha_reclamada: null })
+      .eq("id", entregaId);
+    setConfirmDeshacerId(null);
     await cargar();
   };
 
@@ -342,14 +354,39 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                       )}
                       {reclamada && !editando && (
                         <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => abrirEditFecha(entrega, "reclamada")}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                            style={{ background: "#2e7d3222" }}
-                            title="Editar fecha reclamada">
-                            <Calendar size={13} color="#2e7d32" strokeWidth={2.5} />
-                          </button>
-                          <Check size={15} color="#2e7d32" strokeWidth={2.5} />
+                          {confirmDeshacerId === entrega.id ? (
+                            <>
+                              <button
+                                onClick={() => setConfirmDeshacerId(null)}
+                                className="text-[11px] font-semibold text-muted-foreground px-2 py-1 rounded-lg hover:bg-black/5 transition-colors">
+                                No
+                              </button>
+                              <button
+                                onClick={() => deshacerEntrega(entrega.id)}
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white transition-all active:scale-95"
+                                style={{ background: "#e65100" }}>
+                                Sí, deshacer
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setConfirmDeshacerId(entrega.id)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                                style={{ background: "#2e7d3222" }}
+                                title="Deshacer entrega">
+                                <RotateCcw size={12} color="#2e7d32" strokeWidth={2.5} />
+                              </button>
+                              <button
+                                onClick={() => abrirEditFecha(entrega, "reclamada")}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                                style={{ background: "#2e7d3222" }}
+                                title="Editar fecha reclamada">
+                                <Calendar size={13} color="#2e7d32" strokeWidth={2.5} />
+                              </button>
+                              <Check size={15} color="#2e7d32" strokeWidth={2.5} />
+                            </>
+                          )}
                         </div>
                       )}
                       {editando && (
