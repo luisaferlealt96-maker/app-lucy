@@ -752,7 +752,7 @@ function KanbanBoardView({
           <CalendarioView citas={citas} examenes={examenes} medicamentos={medicamentos} nuevaCitaHref={nuevaCitaHref} />
         )}
         {!(activeBoard === "citas" && citasView === "calendario") && (
-        <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0" style={{ scrollbarWidth: "thin", alignItems: "flex-start" }}>
+        <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0 items-start" style={{ scrollbarWidth: "thin" }}>
 
           {activeBoard === "citas" && (
             <>
@@ -987,7 +987,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="w-[280px] shrink-0 flex flex-col rounded-2xl overflow-hidden"
+      className="w-[280px] shrink-0 flex flex-col rounded-2xl overflow-hidden max-h-[calc(100dvh-240px)]"
       style={{
         background: isOver ? bg + "CC" : bg + "55",
         border: isOver ? `2px dashed ${color}66` : "1px solid rgba(0,0,0,0.05)",
@@ -1014,8 +1014,8 @@ function KanbanColumn({
       </div>
 
       <div
-        className="flex flex-col gap-2.5 p-2.5 overflow-y-auto"
-        style={{ scrollbarWidth: "thin", maxHeight: "calc(100dvh - 368px)" }}
+        className="flex flex-col gap-2.5 p-2.5 overflow-y-auto flex-1 min-h-0"
+        style={{ scrollbarWidth: "thin" }}
       >
         {loading ? (
           [1, 2].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)
@@ -1761,13 +1761,14 @@ function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
 
       {/* ── VISTA SEMANA ── */}
       {calView === "semana" && (
-        <div className="flex gap-2 flex-1 min-h-0 overflow-hidden p-3">
+        <div className="flex gap-2 flex-1 min-h-0 overflow-x-auto p-3" style={{ scrollbarWidth: "thin" }}>
           {weekDays.map((day, i) => {
             const dayEvents = getEvents(day);
             const hoy = isToday(day);
             return (
-              <div key={i} className="flex-1 flex flex-col min-w-0 rounded-2xl overflow-hidden"
+              <div key={i} className="flex-1 flex flex-col rounded-2xl overflow-hidden"
                 style={{
+                  minWidth: 110,
                   background: hoy ? "#FDF2F4" : "white",
                   border: hoy ? "1.5px solid #C0546A33" : "1px solid rgba(0,0,0,0.06)",
                   boxShadow: hoy ? "0 2px 12px #C0546A18" : "0 1px 3px rgba(0,0,0,0.04)",
