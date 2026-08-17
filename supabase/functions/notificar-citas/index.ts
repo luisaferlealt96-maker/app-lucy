@@ -550,6 +550,49 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ── CRON: recordatorio de entrega de medicamento en 2 días ──────────
+    if (tipo === "recordatorio_entrega") {
+      const OFFSET_MS = 5 * 60 * 60 * 1000;
+      const ahoraBogota = new Date(Date.now() - OFFSET_MS);
+      const en2Dias = new Date(ahoraBogota);
+      en2Dias.setUTCDate(ahoraBogota.getUTCDate() + 2);
+      const en2DiasStr = en2Dias.toISOString().split("T")[0];
+
+      const { data: entregas } = await sb
+        .from("entregas_medicamento")
+        .select("*, medicamento:medicamento_id(nombre, total_entregas)")
+        .eq("estado", "pendiente")
+        .eq("fecha_programada", en2DiasStr);
+
+      const { data: destinatarios } = await sb
+        .from("miembros_familia")
+        .select("nombre, telefono, rol")
+        .eq("activo", true)
+        .in("rol", ["admin", "familiar"])
+        .not("telefono", "is", null);
+
+      let enviados = 0;
+
+      for (const entrega of entregas ?? []) {
+        const med = entrega.medicamento as { nombre: string; total_entregas: number } | null;
+        if (!med) continue;
+        const fechaTexto = fechaCorta(en2DiasStr);
+        const entregaLabel = `${entrega.numero_entrega} de ${med.total_entregas}`;
+
+        for (const m of (destinatarios ?? []) as { nombre: string; telefono: string }[]) {
+          const ok = await enviarWA(m.telefono, "medicamento_entrega_lucy", [
+            { name: "nombre",         value: m.nombre },
+            { name: "medicamento",    value: med.nombre },
+            { name: "numero_entrega", value: entregaLabel },
+            { name: "fecha",          value: fechaTexto },
+          ]);
+          if (ok) enviados++;
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true, tipo, entregasNotificadas: enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "tipo no reconocido" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (err) {
     console.error(err);

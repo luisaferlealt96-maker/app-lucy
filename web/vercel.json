@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/notificar?tipo=reporte_post_cita",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/notificar?tipo=recordatorio_entrega",
+      "schedule": "0 14 * * *"
     }
   ]
 }
