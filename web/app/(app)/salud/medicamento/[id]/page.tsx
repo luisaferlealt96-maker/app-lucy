@@ -4,7 +4,7 @@ import { use, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, Pill, FileText, Upload, Trash2, ExternalLink,
-  Check, Package, Circle, X, Pencil, Plus, Minus,
+  Check, Package, Circle, X, Pencil, Plus, Minus, Calendar,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,11 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
   const [loading, setLoading] = useState(true);
   const [uploadingFormula, setUploadingFormula] = useState(false);
   const [togglingActivo, setTogglingActivo] = useState(false);
+
+  // Editar fecha de entrega inline
+  const [editandoEntregaId, setEditandoEntregaId] = useState<string | null>(null);
+  const [fechaEditEntrega, setFechaEditEntrega] = useState("");
+  const [savingFechaEntrega, setSavingFechaEntrega] = useState(false);
 
   // Editar
   const [showEdit, setShowEdit] = useState(false);
@@ -112,6 +117,23 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
     await supabase.from("entregas_medicamento")
       .update({ estado: "reclamada", fecha_reclamada: hoy })
       .eq("id", entregaId);
+    await cargar();
+  };
+
+  const abrirEditFecha = (entrega: EntregaMedicamento) => {
+    setEditandoEntregaId(entrega.id);
+    setFechaEditEntrega(entrega.fecha_programada ?? "");
+  };
+
+  const handleGuardarFechaEntrega = async () => {
+    if (!editandoEntregaId) return;
+    setSavingFechaEntrega(true);
+    const supabase = createClient();
+    await supabase.from("entregas_medicamento")
+      .update({ fecha_programada: fechaEditEntrega || null })
+      .eq("id", editandoEntregaId);
+    setEditandoEntregaId(null);
+    setSavingFechaEntrega(false);
     await cargar();
   };
 
@@ -274,6 +296,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
               {entregas.map(entrega => {
                 const reclamada = entrega.estado === "reclamada";
                 const vencida = !reclamada && esVencida(entrega.fecha_programada);
+                const editando = editandoEntregaId === entrega.id;
                 const bg    = reclamada ? "#E8F5E9" : vencida ? "#FFF3E0" : "#F0FAF7";
                 const color = reclamada ? "#2e7d32" : vencida ? "#e65100" : "#2E7D6A";
                 const fechaTexto = reclamada
@@ -281,29 +304,70 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                   : (entrega.fecha_programada ? formatFechaCorta(entrega.fecha_programada) : "Sin fecha");
                 return (
                   <div key={entrega.id}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    className="flex flex-col gap-2 rounded-xl px-3 py-2.5"
                     style={{ background: bg }}>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0"
-                      style={{ background: color + "22", color }}>
-                      {entrega.numero_entrega}
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0"
+                        style={{ background: color + "22", color }}>
+                        {entrega.numero_entrega}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold" style={{ color }}>
+                          Entrega {entrega.numero_entrega} de {entregas.length}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {reclamada ? `Reclamada el ${fechaTexto}` : vencida ? `Vencida · ${fechaTexto}` : fechaTexto}
+                        </p>
+                      </div>
+                      {!reclamada && !editando && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => abrirEditFecha(entrega)}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                            style={{ background: color + "22" }}
+                            title="Editar fecha">
+                            <Calendar size={13} style={{ color }} strokeWidth={2.5} />
+                          </button>
+                          <button
+                            onClick={() => marcarEntrega(entrega.id)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
+                            style={{ background: "#2E7D6A" }}>
+                            <Check size={11} strokeWidth={2.5} />Reclamar
+                          </button>
+                        </div>
+                      )}
+                      {reclamada && <Check size={15} color="#2e7d32" strokeWidth={2.5} />}
+                      {editando && (
+                        <button onClick={() => setEditandoEntregaId(null)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center"
+                          style={{ background: "rgba(0,0,0,0.08)" }}>
+                          <X size={13} className="text-muted-foreground" />
+                        </button>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold" style={{ color }}>
-                        Entrega {entrega.numero_entrega} de {entregas.length}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {reclamada ? `Reclamada el ${fechaTexto}` : vencida ? `Vencida · ${fechaTexto}` : fechaTexto}
-                      </p>
-                    </div>
-                    {!reclamada && (
-                      <button
-                        onClick={() => marcarEntrega(entrega.id)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
-                        style={{ background: "#2E7D6A" }}>
-                        <Check size={11} strokeWidth={2.5} />Reclamar
-                      </button>
-                    )}
-                    {reclamada && <Check size={15} color="#2e7d32" strokeWidth={2.5} />}
+                    <AnimatePresence>
+                      {editando && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="flex items-center gap-2 overflow-hidden">
+                          <Input
+                            type="date"
+                            value={fechaEditEntrega}
+                            onChange={e => setFechaEditEntrega(e.target.value)}
+                            className="rounded-xl border-border bg-white h-9 text-sm flex-1"
+                          />
+                          <button
+                            onClick={handleGuardarFechaEntrega}
+                            disabled={savingFechaEntrega}
+                            className="h-9 px-3 rounded-xl text-xs font-bold text-white flex items-center gap-1 disabled:opacity-60"
+                            style={{ background: "#2E7D6A" }}>
+                            {savingFechaEntrega ? "…" : <><Check size={12} strokeWidth={2.5} />Guardar</>}
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
