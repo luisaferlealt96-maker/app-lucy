@@ -7,6 +7,7 @@ import {
   ArrowLeft, Shield, Check, Clock, FileText, X, Pencil, Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import type { AutorizacionEPS, TipoAutorizacion, EstadoAutorizacion } from "@/lib/supabase/types";
@@ -419,11 +420,10 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la autorizaron (opcional)</label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={editForm.fecha_autorizacion}
-                      onChange={e => set("fecha_autorizacion", e.target.value)}
-                      className="rounded-xl border-border bg-white h-12"
+                      onChange={val => set("fecha_autorizacion", val)}
+                      className="rounded-xl border-border bg-white"
                     />
                   </div>
                 </div>
@@ -454,11 +454,10 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
               {(editForm.estado === "en_tramite") && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste a la EPS</label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={editForm.fecha_envio_eps}
-                    onChange={e => set("fecha_envio_eps", e.target.value)}
-                    className="rounded-xl border-border bg-card h-12"
+                    onChange={val => set("fecha_envio_eps", val)}
+                    className="rounded-xl border-border bg-card"
                   />
                 </div>
               )}
@@ -477,11 +476,10 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
               {/* Fecha de la orden */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha de la orden médica</label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={editForm.fecha_orden}
-                  onChange={e => set("fecha_orden", e.target.value)}
-                  className="rounded-xl border-border bg-card h-12"
+                  onChange={val => set("fecha_orden", val)}
+                  className="rounded-xl border-border bg-card"
                 />
               </div>
 

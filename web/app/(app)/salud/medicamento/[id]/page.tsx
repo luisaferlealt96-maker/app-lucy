@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArchivoMedicamento, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
@@ -366,11 +367,10 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           className="flex items-center gap-2 overflow-hidden">
-                          <Input
-                            type="date"
+                          <DatePicker
                             value={fechaEditEntrega}
-                            onChange={e => setFechaEditEntrega(e.target.value)}
-                            className="rounded-xl border-border bg-white h-9 text-sm flex-1"
+                            onChange={val => setFechaEditEntrega(val)}
+                            className="rounded-xl border-border bg-white text-sm flex-1"
                           />
                           <button
                             onClick={handleGuardarFechaEntrega}
@@ -582,11 +582,10 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
               {/* Fecha inicio */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-foreground uppercase tracking-wide">Fecha de inicio (opcional)</label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={editForm.fecha_inicio}
-                  onChange={e => setEditForm(f => ({ ...f, fecha_inicio: e.target.value }))}
-                  className="rounded-xl border-border bg-card h-12"
+                  onChange={val => setEditForm(f => ({ ...f, fecha_inicio: val }))}
+                  className="rounded-xl border-border bg-card"
                 />
               </div>
 

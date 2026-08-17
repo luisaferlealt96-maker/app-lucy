@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { ArrowLeft, Pill, Check, Plus, X, Upload, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMiembros } from "@/hooks/useSalud";
 import { createClient } from "@/lib/supabase/client";
@@ -307,11 +308,10 @@ function NuevoMedicamentoContent() {
                   <label className="text-[11px] font-semibold text-muted-foreground">
                     Entrega {i + 1} de {form.total_entregas} — fecha programada
                   </label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={fecha}
-                    onChange={e => setFechaEntrega(i, e.target.value)}
-                    className="rounded-xl border-border bg-secondary h-10 mt-0.5"
+                    onChange={val => setFechaEntrega(i, val)}
+                    className="rounded-xl border-border bg-secondary mt-0.5"
                   />
                 </div>
               </div>

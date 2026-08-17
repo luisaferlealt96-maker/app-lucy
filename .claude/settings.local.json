@@ -60,7 +60,17 @@
       "Bash(supabase db *)",
       "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__get_project",
       "Bash(vercel env *)",
-      "Bash(supabase secrets *)"
+      "Bash(supabase secrets *)",
+      "Bash(git push *)",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__get_project_url",
+      "mcp__9f10debc-af1a-4d03-80e5-693f86f387d8__get_publishable_keys",
+      "Bash(git commit *)",
+      "mcp__8127ad78-782d-4ef5-be6a-8ffc21ca17fe__get_deployment",
+      "Bash(del \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\.vercel\\\\project.json\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\luisa\\\\OneDrive\\\\Desktop\\\\Proyectos App terceros\\\\app-lucy\\\\web\\\\.vercel\")",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(npm list *)"
     ]
   }
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Shield, Check, Calendar, FlaskConical, Pencil, ChevronRight, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { createClient } from "@/lib/supabase/client";
 import { useMiembros } from "@/hooks/useSalud";
 import type { Cita, Examen, TipoAutorizacion } from "@/lib/supabase/types";
@@ -324,9 +325,9 @@ function NuevaAutorizacionContent() {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha de la orden médica</label>
               <p className="text-xs text-muted-foreground -mt-0.5">El día que el médico escribió la orden.</p>
-              <Input type="date" value={form.fecha_orden}
-                onChange={e => set("fecha_orden", e.target.value)}
-                className="h-12 rounded-xl border-border bg-card" />
+              <DatePicker value={form.fecha_orden}
+                onChange={val => set("fecha_orden", val)}
+                className="rounded-xl border-border bg-card" />
               {venc && <p className="text-xs font-semibold" style={{ color: venc.color }}>{venc.txt}</p>}
             </div>
 
@@ -359,9 +360,9 @@ function NuevaAutorizacionContent() {
             <div className={`overflow-hidden transition-all duration-300 -mx-1 px-1 ${form.estado === "en_tramite" ? "max-h-28 opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}>
               <div className="flex flex-col gap-1.5 pt-1">
                 <label className="text-xs font-bold uppercase tracking-wide text-foreground">Fecha en que la enviaste</label>
-                <Input type="date" value={form.fecha_envio_eps}
-                  onChange={e => set("fecha_envio_eps", e.target.value)}
-                  className="h-12 rounded-xl border-border bg-card" />
+                <DatePicker value={form.fecha_envio_eps}
+                  onChange={val => set("fecha_envio_eps", val)}
+                  className="rounded-xl border-border bg-card" />
               </div>
             </div>
 

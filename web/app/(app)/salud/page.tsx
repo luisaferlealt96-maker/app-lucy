@@ -18,6 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAbuelaData, useMiembros, calcularEdad } from "@/hooks/useSalud";
 import { formatFechaHora } from "@/lib/utils/fecha";
@@ -929,11 +930,10 @@ function KanbanBoardView({
                   ? "¿Cuándo enviaste la orden a la EPS?"
                   : "¿Cuándo está programado el examen?"}
             </p>
-            <Input
-              type="date"
+            <DatePicker
               value={pendingDate}
-              onChange={e => setPendingDate(e.target.value)}
-              className="mb-4 h-12 rounded-xl"
+              onChange={val => setPendingDate(val)}
+              className="mb-4 rounded-xl"
             />
             <div className="flex gap-2">
               <button

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
@@ -503,11 +504,10 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-foreground uppercase tracking-wide">Fecha (opcional)</label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={editForm.fecha_solicitud}
-                    onChange={e => setEditForm(f => ({ ...f, fecha_solicitud: e.target.value }))}
-                    className="rounded-xl border-border bg-card h-12"
+                    onChange={val => setEditForm(f => ({ ...f, fecha_solicitud: val }))}
+                    className="rounded-xl border-border bg-card"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">

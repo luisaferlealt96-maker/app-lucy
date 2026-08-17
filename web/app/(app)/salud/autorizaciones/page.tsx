@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -264,10 +265,10 @@ export default function AutorizacionesPage() {
             {(editForm.estado === "en_tramite" || editForm.estado === "autorizada") && (
               <div className="mb-4">
                 <label className="text-xs font-bold uppercase tracking-wide text-foreground block mb-1.5">Fecha en que la enviaste a la EPS</label>
-                <Input
-                  type="date" value={editForm.fecha_envio_eps}
-                  onChange={e => setEditForm(f => ({ ...f, fecha_envio_eps: e.target.value }))}
-                  className="h-11 rounded-xl"
+                <DatePicker
+                  value={editForm.fecha_envio_eps}
+                  onChange={val => setEditForm(f => ({ ...f, fecha_envio_eps: val }))}
+                  className="rounded-xl"
                 />
                 {editForm.fecha_envio_eps && (() => {
                   const d = diasHabilesDesde(editForm.fecha_envio_eps);
@@ -294,10 +295,10 @@ export default function AutorizacionesPage() {
                 </div>
                 <div className="mb-4">
                   <label className="text-xs font-bold uppercase tracking-wide text-foreground block mb-1.5">Fecha de autorización</label>
-                  <Input
-                    type="date" value={editForm.fecha_autorizacion}
-                    onChange={e => setEditForm(f => ({ ...f, fecha_autorizacion: e.target.value }))}
-                    className="h-11 rounded-xl"
+                  <DatePicker
+                    value={editForm.fecha_autorizacion}
+                    onChange={val => setEditForm(f => ({ ...f, fecha_autorizacion: val }))}
+                    className="rounded-xl"
                   />
                 </div>
               </>
