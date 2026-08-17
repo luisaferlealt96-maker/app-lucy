@@ -102,13 +102,19 @@ export default function AbuelaHomePage() {
           </motion.div>
 
           {/* MEDICAMENTOS ACTIVOS */}
-          {medicamentos.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Pill size={22} color="#C0546A" strokeWidth={2.5} />
-                <h2 className="text-2xl font-extrabold text-foreground">Mis medicamentos</h2>
-              </div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Pill size={22} color="#C0546A" strokeWidth={2.5} />
+              <h2 className="text-2xl font-extrabold text-foreground">Mis medicamentos</h2>
+            </div>
 
+            {medicamentos.length === 0 ? (
+              <div className="bg-pillar-salud rounded-3xl p-8 text-center">
+                <Pill size={40} color="#C0546A" className="mx-auto mb-3" />
+                <p className="text-xl font-bold text-foreground">¡Sin medicamentos activos!</p>
+                <p className="text-base text-muted-foreground mt-1">Cuando haya uno, aparecerá aquí</p>
+              </div>
+            ) : (
               <div className="flex flex-col gap-3">
                 {medicamentos.map((med, i) => (
                   <motion.div
@@ -140,8 +146,8 @@ export default function AbuelaHomePage() {
                   </motion.div>
                 ))}
               </div>
-            </motion.div>
-          )}
+            )}
+          </motion.div>
 
           {/* Link discreto para ver todas las citas */}
           <Link href="/mis-citas" className="flex items-center justify-center gap-1.5 py-4 text-muted-foreground">

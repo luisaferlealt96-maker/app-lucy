@@ -56,8 +56,8 @@ export default function LoginPage() {
 
       const dest = miembro?.rol === "abuela" ? "/abuela" : "/inicio";
       window.location.href = dest;
-    } catch (err) {
-      setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
+      setError("Algo salió mal. Intenta de nuevo en un momento.");
       setLoading(false);
     }
   };
@@ -89,8 +89,8 @@ export default function LoginPage() {
       }
 
       setView("forgot-sent");
-    } catch (err) {
-      setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
+      setError("Algo salió mal. Intenta de nuevo en un momento.");
     } finally {
       setLoading(false);
     }
