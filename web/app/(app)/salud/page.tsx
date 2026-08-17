@@ -1689,106 +1689,143 @@ function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
   ];
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden" style={{ background: "#F8F9FB" }}>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ background: "white", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="flex items-center gap-2">
-          <button onClick={prev} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors">
-            <ChevronLeft size={15} className="text-muted-foreground" />
+          <button onClick={prev}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-gray-100 active:scale-90">
+            <ChevronLeft size={16} className="text-muted-foreground" />
           </button>
-          <span className="text-sm font-bold text-foreground min-w-[220px] text-center">
+          <span className="text-sm font-extrabold text-foreground min-w-[220px] text-center tracking-tight">
             {calView === "semana" ? weekLabel : `${MONTHS_ES[month]} ${year}`}
           </span>
-          <button onClick={next} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors">
-            <ChevronRight size={15} className="text-muted-foreground" />
+          <button onClick={next}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-gray-100 active:scale-90">
+            <ChevronRight size={16} className="text-muted-foreground" />
           </button>
           <button onClick={() => setRefDate(new Date())}
-            className="ml-1 px-2.5 py-1 rounded-lg text-xs font-semibold border border-border hover:bg-gray-50 transition-colors text-muted-foreground">
+            className="ml-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all hover:bg-gray-50 active:scale-95"
+            style={{ borderColor: "#C0546A44", color: "#C0546A" }}>
             Hoy
           </button>
           {calView === "semana" && (
-            <button
-              onClick={() => descargarSemanaImagen(weekDays, eventMap)}
-              title="Descargar imagen de la semana"
-              className="ml-1 w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground"
-            >
+            <button onClick={() => descargarSemanaImagen(weekDays, eventMap)}
+              title="Descargar imagen"
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-gray-100 text-muted-foreground hover:text-foreground">
               <Download size={14} />
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: "#f3f4f6" }}>
-          {(["semana","mes"] as const).map(v => (
-            <button key={v} onClick={() => setCalView(v)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all"
-              style={calView === v
-                ? { background: "white", color: "#C0546A", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }
-                : { color: "var(--muted-foreground)" }}>
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Leyenda */}
-      <div className="px-4 py-1.5 flex items-center gap-3 shrink-0 border-b border-black/5">
-        {legendItems.map(l => (
-          <div key={l.label} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: l.bg, border: `1.5px solid ${l.color}` }} />
-            <span className="text-[10px] font-semibold" style={{ color: l.color }}>{l.label}</span>
+        <div className="flex items-center gap-4">
+          {/* Leyenda inline */}
+          <div className="hidden xl:flex items-center gap-3">
+            {legendItems.map(l => (
+              <div key={l.label} className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: l.color }} />
+                <span className="text-[11px] font-semibold text-muted-foreground">{l.label}</span>
+              </div>
+            ))}
           </div>
-        ))}
+          {/* Toggle vista */}
+          <div className="flex items-center gap-0.5 p-1 rounded-xl" style={{ background: "#f3f4f6" }}>
+            {(["semana","mes"] as const).map(v => (
+              <button key={v} onClick={() => setCalView(v)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                style={calView === v
+                  ? { background: "white", color: "#C0546A", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }
+                  : { color: "#9ca3af" }}>
+                {v === "semana" ? "Semana" : "Mes"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Sin fecha banner */}
       {sinFecha.length > 0 && (
-        <div className="px-5 py-2 flex items-center gap-2 shrink-0 border-b" style={{ background: "#FFF3E0", borderColor: "#FFE0B2" }}>
-          <Clock size={13} color="#e65100" />
+        <div className="px-4 py-2 flex items-center gap-2 shrink-0"
+          style={{ background: "#FFF3E0", borderBottom: "1px solid #FFE0B2" }}>
+          <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: "#e6510022" }}>
+            <Clock size={11} color="#e65100" />
+          </div>
           <span className="text-xs font-semibold" style={{ color: "#e65100" }}>
-            {sinFecha.length} cita{sinFecha.length !== 1 ? "s" : ""} sin fecha asignada
+            {sinFecha.length} cita{sinFecha.length !== 1 ? "s" : ""} sin fecha
           </span>
-          <Link href={nuevaCitaHref} className="ml-auto text-xs font-bold" style={{ color: "#e65100" }}>Ver →</Link>
+          <Link href={nuevaCitaHref} className="ml-auto text-xs font-bold underline underline-offset-2"
+            style={{ color: "#e65100" }}>Ver →</Link>
         </div>
       )}
 
-      {/* SEMANA */}
+      {/* ── VISTA SEMANA ── */}
       {calView === "semana" && (
-        <div className="flex flex-1 min-h-0 overflow-hidden divide-x divide-black/5">
+        <div className="flex gap-2 flex-1 min-h-0 overflow-hidden p-3">
           {weekDays.map((day, i) => {
             const dayEvents = getEvents(day);
             const hoy = isToday(day);
             return (
-              <div key={i} className="flex-1 flex flex-col min-w-0">
-                <div className="px-2 py-2.5 text-center border-b border-black/5 shrink-0"
-                  style={{ background: hoy ? "#FDF2F4" : undefined }}>
-                  <p className="text-[10px] font-bold uppercase tracking-wide"
-                    style={{ color: hoy ? "#C0546A" : "var(--muted-foreground)" }}>
+              <div key={i} className="flex-1 flex flex-col min-w-0 rounded-2xl overflow-hidden"
+                style={{
+                  background: hoy ? "#FDF2F4" : "white",
+                  border: hoy ? "1.5px solid #C0546A33" : "1px solid rgba(0,0,0,0.06)",
+                  boxShadow: hoy ? "0 2px 12px #C0546A18" : "0 1px 3px rgba(0,0,0,0.04)",
+                }}>
+                {/* Día header */}
+                <div className="flex flex-col items-center px-1 pt-2.5 pb-2 shrink-0"
+                  style={{ borderBottom: `1px solid ${hoy ? "#C0546A22" : "rgba(0,0,0,0.05)"}` }}>
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5"
+                    style={{ color: hoy ? "#C0546A" : "#9ca3af" }}>
                     {DAYS_ES[i]}
-                  </p>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center mx-auto mt-0.5 text-sm font-extrabold"
-                    style={hoy ? { background: "#C0546A", color: "white" } : { color: "var(--foreground)" }}>
+                  </span>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-extrabold"
+                    style={hoy
+                      ? { background: "#C0546A", color: "white", boxShadow: "0 2px 8px #C0546A55" }
+                      : { color: "#374151" }}>
                     {day.getDate()}
                   </div>
+                  {dayEvents.length > 0 && (
+                    <div className="flex gap-0.5 mt-1.5">
+                      {dayEvents.slice(0, 3).map((ev, di) => (
+                        <div key={di} className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: EV_STYLE[ev.kind].border }} />
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                {/* Eventos */}
                 <div className="flex-1 overflow-y-auto p-1.5 flex flex-col gap-1.5" style={{ scrollbarWidth: "thin" }}>
+                  {dayEvents.length === 0 && (
+                    <div className="flex-1 flex items-center justify-center py-4 opacity-20">
+                      <div className="w-0.5 h-10 rounded-full" style={{ background: hoy ? "#C0546A" : "#d1d5db" }} />
+                    </div>
+                  )}
                   {dayEvents.map(ev => {
                     const st = EV_STYLE[ev.kind];
                     return (
                       <Link key={`${ev.kind}-${ev.id}`} href={ev.href}>
-                        <div className="rounded-lg px-2 py-1.5 border-l-2 hover:opacity-90 transition-opacity"
-                          style={{ background: st.bg, borderLeftColor: st.border }}>
-                          <p className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: st.text }}>{ev.title}</p>
-                          {ev.time && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Clock size={9} style={{ color: st.border }} />
-                              <span className="text-[10px] font-semibold" style={{ color: st.text }}>{ev.time}</span>
-                            </div>
-                          )}
-                          {"sub" in ev && ev.sub && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <MapPin size={9} className="text-muted-foreground" />
-                              <span className="text-[10px] text-muted-foreground truncate">{ev.sub}</span>
-                            </div>
-                          )}
+                        <div className="rounded-xl overflow-hidden hover:scale-[1.02] transition-all cursor-pointer"
+                          style={{ background: st.bg, boxShadow: `0 1px 4px ${st.border}22` }}>
+                          <div className="h-[3px] w-full" style={{ background: st.border }} />
+                          <div className="px-2 py-1.5">
+                            <p className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: st.text }}>
+                              {ev.title}
+                            </p>
+                            {ev.time && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Clock size={9} style={{ color: st.border }} />
+                                <span className="text-[10px] font-bold" style={{ color: st.border }}>{ev.time}</span>
+                              </div>
+                            )}
+                            {ev.sub && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <MapPin size={8} className="text-muted-foreground" />
+                                <span className="text-[9px] text-muted-foreground truncate">{ev.sub}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </Link>
                     );
@@ -1800,42 +1837,62 @@ function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
         </div>
       )}
 
-      {/* MES */}
+      {/* ── VISTA MES ── */}
       {calView === "mes" && (
-        <div className="flex-1 overflow-y-auto px-4 py-3" style={{ scrollbarWidth: "thin" }}>
-          <div className="grid grid-cols-7 mb-1">
-            {DAYS_ES.map(d => (
-              <div key={d} className="text-center text-[11px] font-bold text-muted-foreground py-1">{d}</div>
+        <div className="flex-1 overflow-y-auto p-3" style={{ scrollbarWidth: "thin" }}>
+          {/* Cabecera días */}
+          <div className="grid grid-cols-7 mb-2 gap-1">
+            {DAYS_ES.map((d, idx) => (
+              <div key={d} className="text-center py-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest"
+                  style={{ color: idx >= 5 ? "#C0546A99" : "#9ca3af" }}>
+                  {d}
+                </span>
+              </div>
             ))}
           </div>
+          {/* Grid días */}
           <div className="grid grid-cols-7 gap-1">
             {monthGrid.map((date, i) => {
-              if (!date) return <div key={`e-${i}`} className="min-h-[68px]" />;
+              if (!date) return <div key={`e-${i}`} className="min-h-[80px]" />;
               const dayEvents = getEvents(date);
               const hoy = isToday(date);
               const currentM = date.getMonth() === month;
+              const isWeekend = date.getDay() === 0 || date.getDay() === 6;
               return (
-                <div key={i} className="min-h-[68px] rounded-xl p-1.5 flex flex-col transition-colors"
-                  style={{ background: hoy ? "#FDF2F4" : undefined }}>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center self-center text-xs font-bold mb-1"
-                    style={hoy ? { background: "#C0546A", color: "white" }
-                      : { color: currentM ? "var(--foreground)" : "var(--muted-foreground)", opacity: currentM ? 1 : 0.35 }}>
-                    {date.getDate()}
+                <div key={i} className="min-h-[80px] rounded-xl p-1.5 flex flex-col transition-all"
+                  style={{
+                    background: hoy ? "#FDF2F4" : isWeekend ? "#FAFAFA" : "white",
+                    border: hoy ? "1.5px solid #C0546A33" : "1px solid rgba(0,0,0,0.05)",
+                    boxShadow: hoy ? "0 2px 8px #C0546A12" : "none",
+                    opacity: !currentM ? 0.4 : 1,
+                  }}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center self-start mb-1"
+                    style={hoy
+                      ? { background: "#C0546A", color: "white", boxShadow: "0 1px 6px #C0546A44" }
+                      : { color: "var(--foreground)" }}>
+                    <span className="text-[11px] font-extrabold">{date.getDate()}</span>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    {dayEvents.slice(0, 2).map(ev => {
+                    {dayEvents.slice(0, 3).map(ev => {
                       const st = EV_STYLE[ev.kind];
                       return (
                         <Link key={`${ev.kind}-${ev.id}`} href={ev.href}>
-                          <div className="rounded px-1.5 py-0.5 text-[10px] font-semibold truncate hover:opacity-80 transition-opacity"
-                            style={{ background: st.bg, color: st.text }}>
+                          <div className="rounded-md px-1.5 py-[3px] text-[10px] font-bold truncate hover:opacity-80 transition-opacity leading-tight"
+                            style={{
+                              background: st.bg,
+                              color: st.text,
+                              borderLeft: `2px solid ${st.border}`,
+                            }}>
                             {ev.title}
                           </div>
                         </Link>
                       );
                     })}
-                    {dayEvents.length > 2 && (
-                      <span className="text-[10px] text-muted-foreground font-semibold pl-1">+{dayEvents.length - 2}</span>
+                    {dayEvents.length > 3 && (
+                      <span className="text-[10px] font-bold text-muted-foreground pl-1">
+                        +{dayEvents.length - 3}
+                      </span>
                     )}
                   </div>
                 </div>

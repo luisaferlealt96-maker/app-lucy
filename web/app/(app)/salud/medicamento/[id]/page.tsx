@@ -34,6 +34,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
 
   // Editar fecha de entrega inline
   const [editandoEntregaId, setEditandoEntregaId] = useState<string | null>(null);
+  const [editandoTipoFecha, setEditandoTipoFecha] = useState<"programada" | "reclamada">("programada");
   const [fechaEditEntrega, setFechaEditEntrega] = useState("");
   const [savingFechaEntrega, setSavingFechaEntrega] = useState(false);
 
@@ -120,17 +121,19 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
     await cargar();
   };
 
-  const abrirEditFecha = (entrega: EntregaMedicamento) => {
+  const abrirEditFecha = (entrega: EntregaMedicamento, tipo: "programada" | "reclamada") => {
     setEditandoEntregaId(entrega.id);
-    setFechaEditEntrega(entrega.fecha_programada ?? "");
+    setEditandoTipoFecha(tipo);
+    setFechaEditEntrega(tipo === "programada" ? (entrega.fecha_programada ?? "") : (entrega.fecha_reclamada ?? ""));
   };
 
   const handleGuardarFechaEntrega = async () => {
     if (!editandoEntregaId) return;
     setSavingFechaEntrega(true);
     const supabase = createClient();
+    const campo = editandoTipoFecha === "programada" ? "fecha_programada" : "fecha_reclamada";
     await supabase.from("entregas_medicamento")
-      .update({ fecha_programada: fechaEditEntrega || null })
+      .update({ [campo]: fechaEditEntrega || null })
       .eq("id", editandoEntregaId);
     setEditandoEntregaId(null);
     setSavingFechaEntrega(false);
@@ -322,10 +325,10 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                       {!reclamada && !editando && (
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => abrirEditFecha(entrega)}
+                            onClick={() => abrirEditFecha(entrega, "programada")}
                             className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
                             style={{ background: color + "22" }}
-                            title="Editar fecha">
+                            title="Editar fecha programada">
                             <Calendar size={13} style={{ color }} strokeWidth={2.5} />
                           </button>
                           <button
@@ -336,7 +339,18 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                           </button>
                         </div>
                       )}
-                      {reclamada && <Check size={15} color="#2e7d32" strokeWidth={2.5} />}
+                      {reclamada && !editando && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => abrirEditFecha(entrega, "reclamada")}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                            style={{ background: "#2e7d3222" }}
+                            title="Editar fecha reclamada">
+                            <Calendar size={13} color="#2e7d32" strokeWidth={2.5} />
+                          </button>
+                          <Check size={15} color="#2e7d32" strokeWidth={2.5} />
+                        </div>
+                      )}
                       {editando && (
                         <button onClick={() => setEditandoEntregaId(null)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center"
