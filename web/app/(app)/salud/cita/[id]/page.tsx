@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -343,8 +344,15 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 <Clock size={16} color="#e65100" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold" style={{ color: "#e65100" }}>Falta asignar fecha</p>
-                  <p className="text-xs text-muted-foreground">Toca "Editar" para agregar la fecha y el lugar cuando los tengas.</p>
+                  <p className="text-xs text-muted-foreground">Agrega la fecha y el lugar cuando los tengas.</p>
                 </div>
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-[0.97]"
+                  style={{ background: "#e65100", color: "#fff" }}
+                >
+                  Agendar
+                </button>
               </motion.div>
             )}
 
@@ -371,21 +379,26 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
 
             {/* Autorización EPS */}
             {authVinculada && (
-              <div className="rounded-2xl p-4 flex flex-col gap-1"
-                style={{ background: "#E8F5E9", border: "2px solid #4CAF50" }}>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Check size={15} color="#2e7d32" strokeWidth={2.5} />
-                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#2e7d32" }}>
-                    Autorización EPS aprobada
+              <Link href={`/salud/autorizacion/${authVinculada.id}`}>
+                <div className="rounded-2xl p-4 flex flex-col gap-1 transition-all active:scale-[0.98] hover:opacity-90"
+                  style={{ background: "#E8F5E9", border: "2px solid #4CAF50" }}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex items-center gap-2">
+                      <Check size={15} color="#2e7d32" strokeWidth={2.5} />
+                      <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#2e7d32" }}>
+                        Autorización EPS aprobada
+                      </p>
+                    </div>
+                    <ExternalLink size={13} color="#2e7d32" />
+                  </div>
+                  <p className="text-2xl font-extrabold" style={{ color: "#2e7d32" }}>
+                    N° {authVinculada.numero_autorizacion}
                   </p>
+                  {authVinculada.descripcion && (
+                    <p className="text-xs text-muted-foreground">{authVinculada.descripcion}</p>
+                  )}
                 </div>
-                <p className="text-2xl font-extrabold" style={{ color: "#2e7d32" }}>
-                  N° {authVinculada.numero_autorizacion}
-                </p>
-                {authVinculada.descripcion && (
-                  <p className="text-xs text-muted-foreground">{authVinculada.descripcion}</p>
-                )}
-              </div>
+              </Link>
             )}
 
             {/* Orden médica */}

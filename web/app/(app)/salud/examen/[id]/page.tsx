@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, FlaskConical, FileText, Upload, Trash2,
@@ -260,9 +261,18 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                 <span className="text-sm text-foreground capitalize">{fechaTexto}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2.5">
-                <Clock size={15} style={{ color: "#e65100" }} className="shrink-0" />
-                <span className="text-sm font-semibold" style={{ color: "#e65100" }}>Pendiente por agendar</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <Clock size={15} style={{ color: "#e65100" }} className="shrink-0" />
+                  <span className="text-sm font-semibold" style={{ color: "#e65100" }}>Pendiente por agendar</span>
+                </div>
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-[0.97]"
+                  style={{ background: "#e65100", color: "#fff" }}
+                >
+                  Agendar
+                </button>
               </div>
             )}
             {examen.hora && (
@@ -298,21 +308,27 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
 
         {/* Autorización EPS */}
         {authVinculada && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
-            className="rounded-2xl p-4 flex flex-col gap-1"
-            style={{ background: "#E8F5E9", border: "2px solid #4CAF50" }}>
-            <div className="flex items-center gap-2 mb-0.5">
-              <Shield size={14} color="#2e7d32" strokeWidth={2.5} />
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#2e7d32" }}>
-                Autorización EPS aprobada
-              </p>
-            </div>
-            <p className="text-2xl font-extrabold" style={{ color: "#2e7d32" }}>
-              N° {authVinculada.numero_autorizacion}
-            </p>
-            {authVinculada.descripcion && (
-              <p className="text-xs text-muted-foreground">{authVinculada.descripcion}</p>
-            )}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+            <Link href={`/salud/autorizacion/${authVinculada.id}`}>
+              <div className="rounded-2xl p-4 flex flex-col gap-1 transition-all active:scale-[0.98] hover:opacity-90"
+                style={{ background: "#E8F5E9", border: "2px solid #4CAF50" }}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-2">
+                    <Shield size={14} color="#2e7d32" strokeWidth={2.5} />
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#2e7d32" }}>
+                      Autorización EPS aprobada
+                    </p>
+                  </div>
+                  <ExternalLink size={13} color="#2e7d32" />
+                </div>
+                <p className="text-2xl font-extrabold" style={{ color: "#2e7d32" }}>
+                  N° {authVinculada.numero_autorizacion}
+                </p>
+                {authVinculada.descripcion && (
+                  <p className="text-xs text-muted-foreground">{authVinculada.descripcion}</p>
+                )}
+              </div>
+            </Link>
           </motion.div>
         )}
 
