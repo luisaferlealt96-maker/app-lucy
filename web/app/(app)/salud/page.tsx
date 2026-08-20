@@ -1048,7 +1048,14 @@ function CitaCard({ cita, index, authVinculada }: { cita: Cita; index: number; a
           <div className="h-1 w-full" style={{ background: accentColor }} />
           <div className="p-3.5">
             <div className="flex items-start justify-between gap-2">
-              <p className="font-bold text-sm text-foreground leading-tight">{cita.especialidad}</p>
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <p className="font-bold text-sm text-foreground leading-tight">
+                  {cita.nombre ?? cita.especialidad}
+                </p>
+                {cita.nombre && (
+                  <span className="text-[10px] font-semibold text-muted-foreground">{cita.especialidad}</span>
+                )}
+              </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 style={{ background: accentBg, color: accentColor }}>
                 {porAgendar ? "⏳ Por agendar" : "Próxima"}
@@ -1180,7 +1187,12 @@ function MobileCitaCard({ cita, index }: { cita: Cita; index: number }) {
       <Link href={`/salud/cita/${cita.id}`}>
         <div className="bg-card rounded-2xl p-4 border border-border shadow-sm active:scale-[0.98] transition-transform">
           <div className="flex items-start justify-between gap-2">
-            <p className="font-bold text-sm leading-snug">{cita.especialidad}</p>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <p className="font-bold text-sm leading-snug">{cita.nombre ?? cita.especialidad}</p>
+              {cita.nombre && (
+                <span className="text-[10px] font-semibold text-muted-foreground">{cita.especialidad}</span>
+              )}
+            </div>
             <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0"
               style={{ background: accentBg, color: accent }}>
               {badgeLabel}
@@ -1641,7 +1653,7 @@ function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
       const key = new Date(c.fecha_hora!).toDateString();
       add(key, {
         kind: "cita", id: c.id, href: `/salud/cita/${c.id}`,
-        title: c.especialidad,
+        title: c.nombre ?? c.especialidad,
         time: new Date(c.fecha_hora!).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }),
         sub: c.lugar ?? undefined,
       });
@@ -1926,6 +1938,7 @@ function SearchOverlay({
 
   const citasFiltradas = q
     ? citas.filter(c =>
+        (c.nombre?.toLowerCase() ?? "").includes(q) ||
         c.especialidad.toLowerCase().includes(q) ||
         (c.medico?.toLowerCase() ?? "").includes(q) ||
         (c.lugar?.toLowerCase() ?? "").includes(q))
@@ -2008,8 +2021,11 @@ function SearchOverlay({
                       <Calendar size={14} color="#C0546A" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{c.especialidad}</p>
-                      {c.medico && <p className="text-xs text-muted-foreground truncate">{c.medico}</p>}
+                      <p className="text-sm font-semibold text-foreground truncate">{c.nombre ?? c.especialidad}</p>
+                      {c.nombre
+                        ? <p className="text-xs text-muted-foreground truncate">{c.especialidad}</p>
+                        : c.medico && <p className="text-xs text-muted-foreground truncate">{c.medico}</p>
+                      }
                     </div>
                     {c.archivo_url && <FileText size={13} color="#C0546A" className="shrink-0" />}
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
