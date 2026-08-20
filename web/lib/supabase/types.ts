@@ -118,6 +118,8 @@ export interface AutorizacionEPS {
   numero_autorizacion: string | null;
   fecha_autorizacion: string | null;
   notas: string | null;
+  nombre_prestador: string | null;
+  telefono_prestador: string | null;
   cita_id: string | null;
   examen_id: string | null;
   created_by: string | null;
@@ -126,4 +128,15 @@ export interface AutorizacionEPS {
   paciente?: MiembroFamilia;
   cita?: Pick<Cita, "id" | "especialidad" | "fecha_hora"> | null;
   examen?: Pick<Examen, "id" | "nombre" | "tipo"> | null;
+}
+
+export interface NotaSeguimiento {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  cita_id: string | null;
+  examen_id: string | null;
+  medicamento_id: string | null;
+  contenido: string;
+  fecha_nota: string;
 }

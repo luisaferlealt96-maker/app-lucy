@@ -12,6 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArchivoMedicamento, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
+import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Medicamento, EntregaMedicamento } from "@/lib/supabase/types";
 
 function formatFechaCorta(fecha: string | null) {
@@ -473,6 +474,13 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
             </label>
           )}
         </motion.div>
+
+        {/* Seguimiento — notas con fecha y hora */}
+        <NotasSeguimiento
+          medicamentoId={id}
+          accentColor="#2E7D6A"
+          accentBg="#E8F5E9"
+        />
 
         {/* Eliminar medicamento */}
         <div className="pt-2 pb-2">

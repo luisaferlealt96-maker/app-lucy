@@ -4,7 +4,7 @@ import { use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  ArrowLeft, Shield, Check, Clock, FileText, X, Pencil, Trash2,
+  ArrowLeft, Shield, Check, Clock, FileText, X, Pencil, Trash2, Building2, Phone,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -59,6 +59,8 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
     fecha_envio_eps: "",
     numero_autorizacion: "",
     fecha_autorizacion: "",
+    nombre_prestador: "",
+    telefono_prestador: "",
     notas: "",
   });
   const [saving, setSaving] = useState(false);
@@ -83,6 +85,8 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
         fecha_envio_eps:     data.fecha_envio_eps ?? "",
         numero_autorizacion: data.numero_autorizacion ?? "",
         fecha_autorizacion:  data.fecha_autorizacion ?? "",
+        nombre_prestador:    data.nombre_prestador ?? "",
+        telefono_prestador:  data.telefono_prestador ?? "",
         notas:               data.notas ?? "",
       });
     }
@@ -103,6 +107,8 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
       fecha_envio_eps:     editForm.fecha_envio_eps     || null,
       numero_autorizacion: editForm.numero_autorizacion || null,
       fecha_autorizacion:  editForm.fecha_autorizacion  || null,
+      nombre_prestador:    editForm.nombre_prestador    || null,
+      telefono_prestador:  editForm.telefono_prestador  || null,
       notas:               editForm.notas               || null,
     }).eq("id", id);
     setSaving(false);
@@ -230,6 +236,27 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                 <p className="text-sm font-semibold text-foreground">Toca "Editar" para ingresar el número de autorización que te dió la EPS</p>
               </button>
             ) : null}
+
+            {/* Prestador autorizado */}
+            {(auth?.nombre_prestador || auth?.telefono_prestador) && (
+              <div className="bg-card rounded-2xl border border-border shadow-sm p-4 flex flex-col gap-2">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Building2 size={13} />
+                  Prestador autorizado
+                </p>
+                {auth.nombre_prestador && (
+                  <p className="text-sm font-semibold text-foreground">{auth.nombre_prestador}</p>
+                )}
+                {auth.telefono_prestador && (
+                  <a href={`tel:${auth.telefono_prestador}`}
+                    className="flex items-center gap-1.5 text-sm font-semibold"
+                    style={{ color: "#C0546A" }}>
+                    <Phone size={13} />
+                    {auth.telefono_prestador}
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* Datos principales */}
             <div className="bg-card rounded-2xl border border-border shadow-sm divide-y divide-border">
@@ -424,6 +451,25 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                       value={editForm.fecha_autorizacion}
                       onChange={val => set("fecha_autorizacion", val)}
                       className="rounded-xl border-border bg-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wide text-foreground">Nombre del prestador (entidad autorizada)</label>
+                    <Input
+                      placeholder="Ej: Clínica del Country, Centro Médico Dávila"
+                      value={editForm.nombre_prestador}
+                      onChange={e => set("nombre_prestador", e.target.value)}
+                      className="rounded-xl border-border bg-white h-12"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wide text-foreground">Teléfono del prestador (opcional)</label>
+                    <Input
+                      type="tel"
+                      placeholder="Ej: 601 5551234"
+                      value={editForm.telefono_prestador}
+                      onChange={e => set("telefono_prestador", e.target.value)}
+                      className="rounded-xl border-border bg-white h-12"
                     />
                   </div>
                 </div>

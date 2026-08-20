@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArchivoCita, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
 import { formatFechaHora } from "@/lib/utils/fecha";
+import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Cita, MiembroFamilia, AutorizacionEPS } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -626,6 +627,13 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 </p>
               )}
             </div>
+            {/* Seguimiento — notas con fecha y hora */}
+            <NotasSeguimiento
+              citaId={id}
+              accentColor="#9B8EC4"
+              accentBg="#EDE9F7"
+            />
+
             {/* Eliminar */}
             {!confirmDelete ? (
               <button

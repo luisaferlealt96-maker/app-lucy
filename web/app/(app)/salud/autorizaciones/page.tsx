@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
 import {
-  ArrowLeft, Shield, Plus, Calendar, Clock, Check, X, AlertTriangle,
+  ArrowLeft, Shield, Plus, Calendar, Clock, Check, X, AlertTriangle, Building2, Phone,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -66,7 +66,8 @@ export default function AutorizacionesPage() {
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
   const [editForm, setEditForm] = useState({
-    estado: "", fecha_envio_eps: "", numero_autorizacion: "", fecha_autorizacion: "", notas: "",
+    estado: "", fecha_envio_eps: "", numero_autorizacion: "", fecha_autorizacion: "",
+    nombre_prestador: "", telefono_prestador: "", notas: "",
   });
 
   const cargar = useCallback(async () => {
@@ -89,6 +90,8 @@ export default function AutorizacionesPage() {
       fecha_envio_eps:      a.fecha_envio_eps ?? "",
       numero_autorizacion:  a.numero_autorizacion ?? "",
       fecha_autorizacion:   a.fecha_autorizacion ?? "",
+      nombre_prestador:     a.nombre_prestador ?? "",
+      telefono_prestador:   a.telefono_prestador ?? "",
       notas:                a.notas ?? "",
     });
   };
@@ -102,6 +105,8 @@ export default function AutorizacionesPage() {
       fecha_envio_eps:     editForm.fecha_envio_eps     || null,
       numero_autorizacion: editForm.numero_autorizacion || null,
       fecha_autorizacion:  editForm.fecha_autorizacion  || null,
+      nombre_prestador:    editForm.nombre_prestador    || null,
+      telefono_prestador:  editForm.telefono_prestador  || null,
       notas:               editForm.notas               || null,
       updated_at:          new Date().toISOString(),
     }).eq("id", selected.id);
@@ -299,6 +304,35 @@ export default function AutorizacionesPage() {
                     value={editForm.fecha_autorizacion}
                     onChange={val => setEditForm(f => ({ ...f, fecha_autorizacion: val }))}
                     className="rounded-xl"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Prestador — solo si está autorizada */}
+            {editForm.estado === "autorizada" && (
+              <>
+                <div className="mb-4">
+                  <label className="text-xs font-bold uppercase tracking-wide text-foreground block mb-1.5 flex items-center gap-1">
+                    <Building2 size={12} />Nombre del prestador (entidad autorizada)
+                  </label>
+                  <Input
+                    placeholder="Ej: Clínica del Country, Centro Médico Dávila"
+                    value={editForm.nombre_prestador}
+                    onChange={e => setEditForm(f => ({ ...f, nombre_prestador: e.target.value }))}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="text-xs font-bold uppercase tracking-wide text-foreground block mb-1.5 flex items-center gap-1">
+                    <Phone size={12} />Teléfono del prestador (opcional)
+                  </label>
+                  <Input
+                    type="tel"
+                    placeholder="Ej: 601 5551234"
+                    value={editForm.telefono_prestador}
+                    onChange={e => setEditForm(f => ({ ...f, telefono_prestador: e.target.value }))}
+                    className="h-11 rounded-xl"
                   />
                 </div>
               </>

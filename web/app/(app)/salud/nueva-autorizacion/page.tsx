@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Shield, Check, Calendar, FlaskConical, Pencil, ChevronRight, Clock } from "lucide-react";
+import { ArrowLeft, Shield, Check, Calendar, FlaskConical, Pencil, ChevronRight, Clock, Building2, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { createClient } from "@/lib/supabase/client";

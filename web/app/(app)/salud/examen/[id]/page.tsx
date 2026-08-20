@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { uploadDocumentoMedico, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
+import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Examen, AutorizacionEPS, MiembroFamilia } from "@/lib/supabase/types";
 import { useMiembros } from "@/hooks/useSalud";
 
@@ -388,6 +389,15 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
             )}
           </motion.div>
         )}
+
+        {/* Seguimiento — notas con fecha y hora */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+          <NotasSeguimiento
+            examenId={id}
+            accentColor="#9B8EC4"
+            accentBg="#EDE9F7"
+          />
+        </motion.div>
 
         {/* Eliminar */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }}>
