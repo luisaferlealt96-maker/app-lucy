@@ -644,10 +644,10 @@ function KanbanBoardView({
   };
 
   const boards = [
-    { id: "citas"           as const, label: "Citas",           icon: Calendar,     count: citas.length,                                               accent: "#C0546A", bg: "#F2C5CE" },
-    { id: "medicamentos"    as const, label: "Medicamentos",    icon: Pill,         count: medsPorReclamar.length + medsConEntregas.length,            accent: "#2E7D6A", bg: "#B8E2D4" },
+    { id: "citas"           as const, label: "Citas",           icon: Calendar,     count: citasPendienteAgendar.length + citasAgendadas.length + citasCompletadas.length, accent: "#C0546A", bg: "#F2C5CE" },
+    { id: "medicamentos"    as const, label: "Medicamentos",    icon: Pill,         count: medicamentos.length,                                        accent: "#2E7D6A", bg: "#B8E2D4" },
     { id: "examenes"        as const, label: "Procedimientos",  icon: FlaskConical, count: examenes.length,                                            accent: "#9B8EC4", bg: "#EDE9F7" },
-    { id: "autorizaciones"  as const, label: "Autorizaciones",  icon: Shield,       count: autorizaciones.filter(a => a.estado !== "autorizada").length, accent: "#C0546A", bg: "#F2C5CE" },
+    { id: "autorizaciones"  as const, label: "Autorizaciones",  icon: Shield,       count: autorizaciones.length,                                      accent: "#C0546A", bg: "#F2C5CE" },
   ];
 
   const authSinGestionar = autorizaciones.filter(a => a.estado === "sin_gestionar");
