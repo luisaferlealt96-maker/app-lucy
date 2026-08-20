@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, FlaskConical, FileText, Upload, Trash2,
   MapPin, Calendar, Check, ExternalLink, Clock, X, Pencil, Shield, Users, Bell,
+  Building2, Phone,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,11 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
 
   // Editar
   const [showEdit, setShowEdit] = useState(false);
+
+  // Agregar autorización rápida
+  const [showAddAuth, setShowAddAuth] = useState(false);
+  const [addAuthForm, setAddAuthForm] = useState({ numero: "", nombre_prestador: "", telefono_prestador: "" });
+  const [savingAuth, setSavingAuth] = useState(false);
   const [editForm, setEditForm] = useState<{
     nombre: string;
     tipo: "laboratorio" | "examen" | "procedimiento";
@@ -184,6 +190,30 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const handleAddAuth = async () => {
+    if (!examen || !addAuthForm.numero.trim()) return;
+    setSavingAuth(true);
+    const supabase = createClient();
+    const hoy = new Date().toISOString().split("T")[0];
+    await supabase.from("autorizaciones_eps").insert({
+      paciente_id: examen.paciente_id,
+      descripcion: examen.nombre,
+      tipo: examen.tipo as "cita" | "examen" | "laboratorio" | "procedimiento",
+      fecha_orden: hoy,
+      estado: "autorizada" as const,
+      vigencia_dias: 30,
+      numero_autorizacion: addAuthForm.numero.trim(),
+      fecha_autorizacion: hoy,
+      nombre_prestador: addAuthForm.nombre_prestador.trim() || null,
+      telefono_prestador: addAuthForm.telefono_prestador.trim() || null,
+      examen_id: id,
+    });
+    setSavingAuth(false);
+    setShowAddAuth(false);
+    setAddAuthForm({ numero: "", nombre_prestador: "", telefono_prestador: "" });
+    await cargar();
+  };
+
   if (loading) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
@@ -307,8 +337,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
         )}
 
         {/* Autorización EPS */}
-        {authVinculada && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+          {authVinculada ? (
             <Link href={`/salud/autorizacion/${authVinculada.id}`}>
               <div className="rounded-2xl p-4 flex flex-col gap-1 transition-all active:scale-[0.98] hover:opacity-90"
                 style={{ background: "#E8F5E9", border: "2px solid #4CAF50" }}>
@@ -329,8 +359,22 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                 )}
               </div>
             </Link>
-          </motion.div>
-        )}
+          ) : (
+            <div className="rounded-2xl p-4 border border-dashed border-border bg-card flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Shield size={15} className="text-muted-foreground shrink-0" />
+                <p className="text-sm text-muted-foreground">¿Ya tienes número de autorización?</p>
+              </div>
+              <button
+                onClick={() => setShowAddAuth(true)}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-white transition-all active:scale-[0.97]"
+                style={{ background: "#9B8EC4" }}
+              >
+                Agregar
+              </button>
+            </div>
+          )}
+        </motion.div>
 
         {/* Orden médica */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
@@ -608,6 +652,87 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                 style={{ background: "#9B8EC4" }}
               >
                 {savingEdit ? "Guardando…" : <><Check size={16} strokeWidth={2.5} /> Guardar cambios</>}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bottom sheet: Agregar autorización ── */}
+      <AnimatePresence>
+        {showAddAuth && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+            onClick={e => { if (e.target === e.currentTarget) setShowAddAuth(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="w-full max-w-md mx-auto bg-background rounded-t-3xl md:rounded-3xl px-4 pt-4 pb-10 md:pb-6 flex flex-col gap-4"
+              style={{ maxHeight: "92dvh", overflowY: "auto" }}
+            >
+              <div className="w-10 h-1 rounded-full bg-border mx-auto mb-1" />
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-extrabold text-foreground">Número de autorización</h2>
+                <button type="button" onClick={() => setShowAddAuth(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: "var(--secondary)" }}>
+                  <X size={16} className="text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-foreground uppercase tracking-wide">N° de autorización *</label>
+                <Input
+                  placeholder="Ej: 123456789"
+                  value={addAuthForm.numero}
+                  onChange={e => setAddAuthForm(f => ({ ...f, numero: e.target.value }))}
+                  className="rounded-xl border-border bg-card h-12"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Building2 size={12} />
+                  Nombre del prestador (opcional)
+                </label>
+                <Input
+                  placeholder="Ej: Clínica El Bosque"
+                  value={addAuthForm.nombre_prestador}
+                  onChange={e => setAddAuthForm(f => ({ ...f, nombre_prestador: e.target.value }))}
+                  className="rounded-xl border-border bg-card h-12"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Phone size={12} />
+                  Teléfono del prestador (opcional)
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="Ej: 6015551234"
+                  value={addAuthForm.telefono_prestador}
+                  onChange={e => setAddAuthForm(f => ({ ...f, telefono_prestador: e.target.value }))}
+                  className="rounded-xl border-border bg-card h-12"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddAuth}
+                disabled={!addAuthForm.numero.trim() || savingAuth}
+                className="w-full h-13 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.97] disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ background: "#9B8EC4" }}
+              >
+                {savingAuth ? "Guardando…" : <><Check size={16} strokeWidth={2.5} /> Guardar autorización</>}
               </button>
             </motion.div>
           </motion.div>
