@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const sanitize = (s: string) => s.replace(/[^\x20-\x7E]/g, "").trim();
 
-const TIPOS_VALIDOS = ["recordatorio", "autorizaciones", "resultados", "resumen_semanal", "reporte_post_cita", "recordatorio_entrega"];
+const TIPOS_VALIDOS = ["recordatorio", "autorizaciones", "resultados", "resumen_semanal", "reporte_post_cita", "recordatorio_entrega", "todos"];
 
 export async function GET(request: NextRequest) {
   // Vercel envía Authorization: Bearer <CRON_SECRET> en cada llamada de cron
@@ -31,6 +31,17 @@ export async function GET(request: NextRequest) {
   const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  // Ejecutar todos los tipos de notificación en secuencia
+  if (tipo === "todos") {
+    const tipos = ["recordatorio", "autorizaciones", "resultados", "reporte_post_cita", "recordatorio_entrega"];
+    const resultados: Record<string, unknown> = {};
+    for (const t of tipos) {
+      const { data, error } = await supabase.functions.invoke("notificar-citas", { body: { tipo: t } });
+      resultados[t] = error ? { error: error.message } : data;
+    }
+    return NextResponse.json({ ok: true, tipo: "todos", resultados });
+  }
 
   const { data, error } = await supabase.functions.invoke("notificar-citas", {
     body: { tipo },

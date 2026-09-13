@@ -1,28 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/notificar?tipo=recordatorio",
+      "path": "/api/cron/notificar?tipo=todos",
       "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/notificar?tipo=autorizaciones",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/notificar?tipo=resultados",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/notificar?tipo=resumen_semanal",
-      "schedule": "0 14 * * 0"
-    },
-    {
-      "path": "/api/cron/notificar?tipo=reporte_post_cita",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/notificar?tipo=recordatorio_entrega",
-      "schedule": "0 14 * * *"
     }
   ]
 }
