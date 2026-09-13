@@ -240,6 +240,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     setSavingEdit(true);
     const supabase = createClient();
     const tieneFechaCompleta = editForm.fecha && editForm.hora;
+    const estadoAntes = cita.estado;
     await supabase.from("citas").update({
       nombre: editForm.nombre || null,
       especialidad: editForm.especialidad,
@@ -251,6 +252,8 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
         : null,
       acompanante_id: editForm.acompanante_id || null,
       estado: tieneFechaCompleta && cita.estado === "por_agendar" ? "pendiente" : cita.estado,
+      // Resetear recordatorio para que el cron vuelva a notificar con la nueva fecha
+      recordatorio_enviado: tieneFechaCompleta ? false : undefined,
     }).eq("id", id);
     setSavingEdit(false);
     setSavedEdit(true);
@@ -258,9 +261,11 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     await cargar();
     setTimeout(() => setSavedEdit(false), 2000);
 
-    if (tieneFechaCompleta && cita.estado === "por_agendar") {
+    // Enviar notificación WA cuando se agenda (o re-agenda) una cita con fecha completa
+    if (tieneFechaCompleta && (estadoAntes === "por_agendar" || estadoAntes === "pendiente")) {
       const supabaseWA = createClient();
-      supabaseWA.functions.invoke("notificar-citas", { body: { tipo: "nueva_cita", cita_id: id } }).catch(() => {});
+      supabaseWA.functions.invoke("notificar-citas", { body: { tipo: "manual", cita_id: id } })
+        .catch((e) => console.error("WA nueva cita agendada:", e));
     }
   };
 

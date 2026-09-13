@@ -128,13 +128,20 @@ serve(async (req) => {
       // Fin de mañana en Bogotá (23:59 Bogotá = 04:59:59 UTC del día siguiente)
       const fin    = new Date(Date.UTC(mananaBogota.getUTCFullYear(), mananaBogota.getUTCMonth(), mananaBogota.getUTCDate() + 1, 4, 59, 59, 999));
 
-      const [{ data: citas }, { data: todosLos }] = await Promise.all([
+      // Fecha de mañana en Bogotá como string YYYY-MM-DD (para comparar con examenes.fecha_solicitud)
+      const manaStr = `${mananaBogota.getUTCFullYear()}-${String(mananaBogota.getUTCMonth() + 1).padStart(2, "0")}-${String(mananaBogota.getUTCDate()).padStart(2, "0")}`;
+
+      const [{ data: citas }, { data: examenes }, { data: todosLos }] = await Promise.all([
         sb.from("citas")
           .select("*, acompanante:acompanante_id(*)")
           .eq("estado", "pendiente")
           .eq("recordatorio_enviado", false)
           .gte("fecha_hora", inicio.toISOString())
           .lte("fecha_hora", fin.toISOString()),
+        sb.from("examenes")
+          .select("*, acompanante:acompanante_id(*)")
+          .neq("estado", "listo")
+          .eq("fecha_solicitud", manaStr),
         sb.from("miembros_familia").select("*").eq("activo", true),
       ]);
 
@@ -142,6 +149,7 @@ serve(async (req) => {
       const lucy   = todos.find((m: { rol: string }) => m.rol === "abuela");
       let enviados = 0;
 
+      // ── Recordatorios de CITAS ──
       for (const c of citas ?? []) {
         if (!c.fecha_hora) continue;
         const acomp      = c.acompanante;
@@ -193,6 +201,32 @@ serve(async (req) => {
           await sb.from("citas").update({ recordatorio_enviado: true }).eq("id", c.id);
         }
       }
+
+      // ── Recordatorios de EXÁMENES / LABORATORIOS / PROCEDIMIENTOS ──
+      for (const e of examenes ?? []) {
+        if (!e.fecha_solicitud) continue;
+        const acomp    = e.acompanante;
+        const lugar    = e.lugar ?? "por confirmar";
+        const lugarUrl = encodeURIComponent(lugar);
+        const fecha    = fechaCorta(e.fecha_solicitud);
+        const hora     = e.hora ? formatHora(e.hora) : "por confirmar";
+        const esp      = e.nombre;
+        const acompNom = acomp?.nombre ?? "sin asignar";
+        const destinos = todos.filter((m: { telefono: string | null }) => m.telefono);
+
+        for (const m of destinos) {
+          const ok = await enviarWA(m.telefono!, "cita_lucy_recordatorio_manual", [
+            { name: "nombre",       value: m.nombre },
+            { name: "fecha",        value: fecha },
+            { name: "hora",         value: hora },
+            { name: "especialidad", value: esp },
+            { name: "lugar",        value: lugar },
+            { name: "acompanante",  value: acompNom },
+          ], lugarUrl);
+          if (ok) enviados++;
+        }
+      }
+
       return new Response(JSON.stringify({ ok: true, tipo, citasNotificadas: enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 

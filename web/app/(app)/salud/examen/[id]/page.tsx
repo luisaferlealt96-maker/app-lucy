@@ -169,6 +169,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     if (!examen || !editForm.nombre) return;
     setSavingEdit(true);
     const supabase = createClient();
+    const estadoAntes = examen.estado;
+    const tenieFecha = !!examen.fecha_solicitud;
     await supabase.from("examenes").update({
       nombre: editForm.nombre,
       tipo: editForm.tipo,
@@ -185,8 +187,10 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     await cargar();
     setTimeout(() => setSavedEdit(false), 2000);
 
-    if (editForm.fecha_solicitud && !examen.fecha_solicitud) {
-      createClient().functions.invoke("notificar-citas", { body: { tipo: "nueva_cita", examen_id: id } }).catch(() => {});
+    // Notificar cuando se asigna o cambia la fecha de un examen con estado pendiente
+    if (editForm.fecha_solicitud && (estadoAntes === "pendiente" || !tenieFecha)) {
+      createClient().functions.invoke("notificar-citas", { body: { tipo: "manual_examen", examen_id: id } })
+        .catch((e) => console.error("WA examen agendado:", e));
     }
   };
 
