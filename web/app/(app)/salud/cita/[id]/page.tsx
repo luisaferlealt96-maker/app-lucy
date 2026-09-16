@@ -421,16 +421,14 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
             <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:items-start mt-2">
 
               {/* ── LEFT: properties + sections + actions ── */}
-              <div className="flex flex-col gap-0.5 mb-6 lg:mb-0">
-
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-2 mb-1">Detalles</p>
+              <div className="flex flex-col gap-3 mb-6 lg:mb-0">
 
                 {/* Por agendar banner */}
                 {cita?.estado === "por_agendar" && (
                   <motion.div
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl px-3.5 py-2.5 flex items-center gap-3 mb-2"
+                    className="rounded-xl px-3.5 py-2.5 flex items-center gap-3"
                     style={{ background: "#FFF3E0", border: "1.5px solid #FFB74D" }}
                   >
                     <Clock size={14} color="#e65100" className="shrink-0" />
@@ -444,6 +442,11 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     </button>
                   </motion.div>
                 )}
+
+                {/* Properties card */}
+                <div className="bg-card rounded-2xl border border-border shadow-sm">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 pt-3.5 pb-1">Detalles</p>
+                  <div className="px-2 pb-2 flex flex-col gap-0.5">
 
                 {/* Especialidad */}
                 <PropRow
@@ -613,11 +616,15 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                   </Select>
                 </PropRow>
 
-                {/* Autorización EPS */}
-                <div className="mt-3">
+                  </div>{/* end properties list */}
+                </div>{/* end properties card */}
+
+                {/* Autorización EPS + Orden card */}
+                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                <div>
                   <button
                     onClick={() => setOpenAuth(v => !v)}
-                    className="flex items-center gap-2 w-full py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors text-left"
+                    className="flex items-center gap-2 w-full py-3 px-4 hover:bg-muted/40 transition-colors text-left"
                   >
                     <Shield size={13} className="text-muted-foreground" />
                     <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground flex-1">
@@ -636,7 +643,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                         transition={{ duration: 0.18 }}
                         className="overflow-hidden"
                       >
-                        <div className="px-2 pb-2 pt-1">
+                        <div className="px-4 pb-3 pt-1">
                           {authVinculada ? (
                             <Link href={`/salud/autorizacion/${authVinculada.id}`}>
                               <div className="rounded-xl p-3.5 flex flex-col gap-0.5 transition-all active:scale-[0.98]"
@@ -676,11 +683,13 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                   </AnimatePresence>
                 </div>
 
+                <div className="h-px bg-border mx-4" />
+
                 {/* Orden / referencia */}
                 <div>
                   <button
                     onClick={() => setOpenOrden(v => !v)}
-                    className="flex items-center gap-2 w-full py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors text-left"
+                    className="flex items-center gap-2 w-full py-3 px-4 hover:bg-muted/40 transition-colors text-left"
                   >
                     <FileText size={13} className="text-muted-foreground" />
                     <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground flex-1">
@@ -699,7 +708,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                         transition={{ duration: 0.18 }}
                         className="overflow-hidden"
                       >
-                        <div className="px-2 pb-2 pt-1">
+                        <div className="px-4 pb-3 pt-1">
                           {cita?.archivo_url ? (
                             <div className="rounded-xl border p-3 flex items-center gap-3"
                               style={{ borderColor: `${ACCENT}30`, background: "#FDF2F4" }}>
@@ -752,10 +761,11 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     )}
                   </AnimatePresence>
                 </div>
+                </div>{/* end auth+orden card */}
 
                 {/* Audio de la cita */}
                 {audioSignedUrl && (
-                  <div className="px-2 mt-1">
+                  <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
                     <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <Mic size={12} />Nota de voz
                     </p>
@@ -766,7 +776,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 )}
 
                 {/* Action buttons */}
-                <div className="flex flex-col gap-2 mt-4 px-2">
+                <div className="flex flex-col gap-2">
                   {cita?.estado === "pendiente" && (
                     <button
                       onClick={handleEnviarRecordatorio}
@@ -827,7 +837,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Delete */}
-                <div className="mt-4 px-2">
+                <div className="mt-2">
                   {!confirmDelete ? (
                     <button
                       onClick={() => setConfirmDelete(true)}
