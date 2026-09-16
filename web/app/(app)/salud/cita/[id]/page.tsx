@@ -445,8 +445,8 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
 
                 {/* Properties card */}
                 <div className="bg-card rounded-2xl border border-border shadow-sm">
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 pt-3.5 pb-1">Detalles</p>
-                  <div className="px-2 pb-2 flex flex-col gap-0.5">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 pt-3.5 pb-2">Detalles</p>
+                  <div className="px-1 pb-1 flex flex-col divide-y divide-border">
 
                 {/* Especialidad */}
                 <PropRow
