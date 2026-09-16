@@ -75,22 +75,26 @@ export default function SaludPage() {
 
   const edad = calcularEdad(abuela?.fecha_nacimiento ?? null);
 
-  // Tab móvil — persistido en sessionStorage para sobrevivir navegación
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("salud_tab") ?? "citas";
-    return "citas";
-  });
+  // Tab móvil — persistido en sessionStorage para sobrevivir navegación.
+  // El valor inicial SIEMPRE es "citas" (igual que en el servidor) para que
+  // la primera renderización coincida; sessionStorage solo se lee después,
+  // en un efecto — leerlo durante el render causaría un mismatch de hidratación.
+  const [activeTab, setActiveTab] = useState<string>("citas");
+  const [kanbanBoard, setKanbanBoard] = useState<"citas" | "medicamentos" | "examenes" | "autorizaciones">("citas");
+
+  useEffect(() => {
+    const savedTab = sessionStorage.getItem("salud_tab");
+    if (savedTab) setActiveTab(savedTab);
+    const savedBoard = sessionStorage.getItem("salud_kanban");
+    if (savedBoard === "citas" || savedBoard === "medicamentos" || savedBoard === "examenes" || savedBoard === "autorizaciones") {
+      setKanbanBoard(savedBoard);
+    }
+  }, []);
+
   const handleTabChange = (val: string) => {
     setActiveTab(val);
     sessionStorage.setItem("salud_tab", val);
   };
-  const [kanbanBoard, setKanbanBoard] = useState<"citas" | "medicamentos" | "examenes" | "autorizaciones">(() => {
-    if (typeof window !== "undefined") {
-      const s = sessionStorage.getItem("salud_kanban");
-      if (s === "citas" || s === "medicamentos" || s === "examenes" || s === "autorizaciones") return s;
-    }
-    return "citas";
-  });
   const handleKanbanBoard = (b: "citas" | "medicamentos" | "examenes" | "autorizaciones") => {
     setKanbanBoard(b);
     sessionStorage.setItem("salud_kanban", b);
