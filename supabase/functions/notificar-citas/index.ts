@@ -227,6 +227,13 @@ serve(async (req) => {
         }
       }
 
+      // ── Auto-completar citas cuya fecha ya pasó (más de 2h) ──
+      const hace2h = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
+      await sb.from("citas")
+        .update({ estado: "completada" })
+        .eq("estado", "pendiente")
+        .lt("fecha_hora", hace2h);
+
       return new Response(JSON.stringify({ ok: true, tipo, citasNotificadas: enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -624,6 +631,28 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ ok: true, tipo, entregasNotificadas: enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ── CRON UNIFICADO: ejecuta todos los tipos en secuencia ────────────
+    if (tipo === "todos") {
+      const tipos = ["recordatorio", "autorizaciones", "resultados", "reporte_post_cita", "recordatorio_entrega"];
+      const resultados: Record<string, unknown> = {};
+      for (const t of tipos) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/notificar-citas`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${SUPABASE_SERVICE}`,
+            },
+            body: JSON.stringify({ tipo: t }),
+          });
+          resultados[t] = await res.json();
+        } catch (e) {
+          resultados[t] = { error: String(e) };
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, tipo: "todos", resultados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "tipo no reconocido" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });

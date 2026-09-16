@@ -32,17 +32,7 @@ export async function GET(request: NextRequest) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Ejecutar todos los tipos de notificación en secuencia
-  if (tipo === "todos") {
-    const tipos = ["recordatorio", "autorizaciones", "resultados", "reporte_post_cita", "recordatorio_entrega"];
-    const resultados: Record<string, unknown> = {};
-    for (const t of tipos) {
-      const { data, error } = await supabase.functions.invoke("notificar-citas", { body: { tipo: t } });
-      resultados[t] = error ? { error: error.message } : data;
-    }
-    return NextResponse.json({ ok: true, tipo: "todos", resultados });
-  }
-
+  // Una sola llamada a la edge function — el loop interno vive allá (sin timeout de Vercel)
   const { data, error } = await supabase.functions.invoke("notificar-citas", {
     body: { tipo },
   });
