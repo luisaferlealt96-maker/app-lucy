@@ -6,7 +6,7 @@ import {
   Heart, Plus, Calendar, Pill, FlaskConical, Clock, Circle,
   Check, Package, MapPin, Mic, User, Activity, X, FileText,
   ChevronLeft, ChevronRight, LayoutGrid, Pencil, Search, ExternalLink, Shield,
-  ChevronDown, Download,
+  ChevronDown, Download, UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -44,10 +44,26 @@ export default function SaludPage() {
   const { abuelaId, abuela, citas, medicamentos, examenes, loading, refresh, marcarEntregaReclamada } = useAbuelaData();
   const { miembros } = useMiembros();
 
-  const citasPendienteAgendar = citas.filter(c => c.estado === "por_agendar");
-  const citasAgendadas        = citas.filter(c => c.estado === "pendiente");
-  const citasCompletadas      = citas.filter(c => c.estado === "completada");
-  const citasActivas          = citas.filter(c => c.estado !== "completada" && c.estado !== "cancelada");
+  // ── Filtro "mis asignaciones" ─────────────────────────────────────
+  const [filtrarMis, setFiltrarMis] = useState(false);
+  const [currentMiembroId, setCurrentMiembroId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!miembros.length) return;
+    createClient().auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      const m = miembros.find(mb => mb.user_id === data.user!.id);
+      if (m) setCurrentMiembroId(m.id);
+    });
+  }, [miembros]);
+
+  const citasFiltradas   = filtrarMis && currentMiembroId ? citas.filter(c => c.acompanante_id === currentMiembroId) : citas;
+  const examenesFiltrados = filtrarMis && currentMiembroId ? examenes.filter(e => e.acompanante_id === currentMiembroId) : examenes;
+
+  const citasPendienteAgendar = citasFiltradas.filter(c => c.estado === "por_agendar");
+  const citasAgendadas        = citasFiltradas.filter(c => c.estado === "pendiente");
+  const citasCompletadas      = citasFiltradas.filter(c => c.estado === "completada");
+  const citasActivas          = citasFiltradas.filter(c => c.estado !== "completada" && c.estado !== "cancelada");
   const medsActivos           = medicamentos.filter(m => m.activo);
   const medsPorReclamar       = medsActivos.filter(m => (m.entregas_medicamento ?? []).every(e => e.estado !== "reclamada"));
   const medsConEntregas       = medsActivos.filter(m => (m.entregas_medicamento ?? []).some(e => e.estado === "reclamada"));
@@ -217,23 +233,50 @@ export default function SaludPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="citas">
-              <MobileCitasList citas={citas} loading={loading} nuevaCitaHref={nuevaCitaHref} />
+              {currentMiembroId && (
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => setFiltrarMis(f => !f)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                    style={filtrarMis
+                      ? { background: "#C0546A", color: "#fff", borderColor: "#C0546A" }
+                      : { background: "transparent", color: "var(--muted-foreground)", borderColor: "var(--border)" }}
+                  >
+                    <UserCheck size={12} />
+                    Mis asignaciones
+                  </button>
+                </div>
+              )}
+              <MobileCitasList citas={citasFiltradas} loading={loading} nuevaCitaHref={nuevaCitaHref} />
             </TabsContent>
             <TabsContent value="medicamentos">
               <MobileMedsList medicamentos={medicamentos} medsPorReclamar={medsPorReclamar} medsConEntregas={medsConEntregas} loading={loading} nuevoMedHref={nuevoMedHref} marcarEntregaReclamada={marcarEntregaReclamada} />
             </TabsContent>
             <TabsContent value="examenes">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-muted-foreground">{loading ? "…" : `${examenes.length} pendiente${examenes.length !== 1 ? "s" : ""}`}</p>
-                <Link href={nuevoExHref} className="flex items-center gap-1 text-xs font-semibold text-primary"><Plus size={13} />Agregar</Link>
+                <p className="text-xs text-muted-foreground">{loading ? "…" : `${examenesFiltrados.length} pendiente${examenesFiltrados.length !== 1 ? "s" : ""}`}</p>
+                <div className="flex items-center gap-2">
+                  {currentMiembroId && (
+                    <button
+                      onClick={() => setFiltrarMis(f => !f)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
+                      style={filtrarMis
+                        ? { background: "#9B8EC4", color: "#fff", borderColor: "#9B8EC4" }
+                        : { background: "transparent", color: "var(--muted-foreground)", borderColor: "var(--border)" }}
+                    >
+                      <UserCheck size={11} />Mis asignaciones
+                    </button>
+                  )}
+                  <Link href={nuevoExHref} className="flex items-center gap-1 text-xs font-semibold text-primary"><Plus size={13} />Agregar</Link>
+                </div>
               </div>
               {loading ? (
                 <div className="flex flex-col gap-3">{[1,2].map(i => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
-              ) : examenes.length === 0 ? (
-                <EmptyState icon={FlaskConical} texto="Sin procedimientos registrados" href={nuevoExHref} cta="Agregar" />
+              ) : examenesFiltrados.length === 0 ? (
+                <EmptyState icon={FlaskConical} texto={filtrarMis ? "Sin procedimientos asignados a ti" : "Sin procedimientos registrados"} href={nuevoExHref} cta="Agregar" />
               ) : (
                 <div className="flex flex-col gap-3">
-                  {examenes.map((ex, i) => <ExamenCard key={ex.id} examen={ex} index={i} />)}
+                  {examenesFiltrados.map((ex, i) => <ExamenCard key={ex.id} examen={ex} index={i} />)}
                 </div>
               )}
             </TabsContent>
@@ -358,7 +401,7 @@ export default function SaludPage() {
           className="flex-1 min-h-0"
         >
           <KanbanBoardView
-            citas={citas}
+            citas={citasFiltradas}
             citasPendienteAgendar={citasPendienteAgendar}
             citasAgendadas={citasAgendadas}
             citasCompletadas={citasCompletadas}
@@ -366,12 +409,14 @@ export default function SaludPage() {
             medsActivos={medsActivos}
             medsPorReclamar={medsPorReclamar}
             medsConEntregas={medsConEntregas}
-            examenes={examenes}
+            examenes={examenesFiltrados}
             autorizaciones={autorizaciones}
             loadingAuth={loadingAuth}
             setAutorizaciones={setAutorizaciones}
             loading={loading}
             refresh={refresh}
+            filtrarMis={filtrarMis}
+            onToggleFiltrar={currentMiembroId ? () => setFiltrarMis(f => !f) : undefined}
             nuevaCitaHref={nuevaCitaHref}
             nuevoMedHref={nuevoMedHref}
             nuevoExHref={nuevoExHref}
@@ -500,6 +545,7 @@ function KanbanBoardView({
   nuevaCitaHref, nuevoMedHref, nuevoExHref, nuevoAuthHref,
   marcarEntregaReclamada,
   activeBoard, onBoardChange,
+  filtrarMis, onToggleFiltrar,
 }: {
   citas: Cita[]; citasPendienteAgendar: Cita[]; citasAgendadas: Cita[]; citasCompletadas: Cita[];
   medicamentos: Medicamento[]; medsActivos: Medicamento[]; medsPorReclamar: Medicamento[]; medsConEntregas: Medicamento[]; examenes: Examen[];
@@ -510,6 +556,8 @@ function KanbanBoardView({
   marcarEntregaReclamada: (id: string) => void;
   activeBoard: "citas" | "medicamentos" | "examenes" | "autorizaciones";
   onBoardChange: (b: "citas" | "medicamentos" | "examenes" | "autorizaciones") => void;
+  filtrarMis?: boolean;
+  onToggleFiltrar?: () => void;
 }) {
   const [citasView, setCitasView] = useState<"kanban" | "calendario">("kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -719,6 +767,21 @@ function KanbanBoardView({
               <>
                 <div className="w-px h-5 bg-border mx-1" />
                 <p className="hidden xl:block text-[11px] text-muted-foreground px-2 select-none">Arrastra para mover</p>
+              </>
+            )}
+            {onToggleFiltrar && (activeBoard === "citas" || activeBoard === "examenes") && (
+              <>
+                <div className="w-px h-5 bg-border mx-1" />
+                <button
+                  onClick={onToggleFiltrar}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                  style={filtrarMis
+                    ? { background: "#C0546A20", color: "#C0546A" }
+                    : { color: "var(--muted-foreground)" }}
+                >
+                  <UserCheck size={13} />
+                  Mis asignaciones
+                </button>
               </>
             )}
           </div>
