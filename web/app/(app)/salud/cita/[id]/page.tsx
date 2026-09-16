@@ -233,17 +233,17 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
 
   // fieldChanged is passed to decide whether to send WA notification
   const handleGuardarEdicion = async (fieldChanged?: string) => {
-    if (!cita || !editForm.especialidad) return;
+    if (!cita || !editForm.especialidad.trim()) return;
     setSavingEdit(true);
     const supabase = createClient();
     const tieneFechaCompleta = editForm.fecha && editForm.hora;
     const estadoAntes = cita.estado;
     await supabase.from("citas").update({
-      nombre: editForm.nombre || null,
-      especialidad: editForm.especialidad,
-      medico: editForm.medico || null,
-      lugar: editForm.lugar || null,
-      lugar_detalle: editForm.lugar_detalle || null,
+      nombre: editForm.nombre.trim() || null,
+      especialidad: editForm.especialidad.trim(),
+      medico: editForm.medico.trim() || null,
+      lugar: editForm.lugar.trim() || null,
+      lugar_detalle: editForm.lugar_detalle.trim() || null,
       fecha_hora: tieneFechaCompleta
         ? new Date(`${editForm.fecha}T${editForm.hora}`).toISOString()
         : null,
@@ -405,17 +405,20 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
 
-            {savedEdit && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-xl px-4 py-2.5 flex items-center gap-2 mb-3"
-                style={{ background: "#E8F5E9" }}
-              >
-                <Check size={13} color="#2e7d32" strokeWidth={2.5} />
-                <p className="text-sm font-semibold" style={{ color: "#2e7d32" }}>Guardado</p>
-              </motion.div>
-            )}
+            <AnimatePresence>
+              {savedEdit && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="fixed top-16 left-1/2 -translate-x-1/2 z-40 rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-lg"
+                  style={{ background: "#E8F5E9" }}
+                >
+                  <Check size={13} color="#2e7d32" strokeWidth={2.5} />
+                  <p className="text-sm font-semibold" style={{ color: "#2e7d32" }}>Guardado</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Two-column layout: properties left, notes right on desktop */}
             <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:items-start mt-2">

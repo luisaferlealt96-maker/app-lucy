@@ -29,7 +29,7 @@ export default function InicioPage() {
   }, []);
 
   const today = new Date().toLocaleDateString("es-CO", {
-    weekday: "long", day: "numeric", month: "long",
+    weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota",
   });
   const todayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
 

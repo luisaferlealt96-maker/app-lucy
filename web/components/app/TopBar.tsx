@@ -19,6 +19,7 @@ export function TopBar() {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "America/Bogota",
   });
   const todayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
 
