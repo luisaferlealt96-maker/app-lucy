@@ -444,9 +444,9 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 )}
 
                 {/* Properties card */}
-                <div className="bg-card rounded-2xl border border-border shadow-sm">
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 pt-3.5 pb-2">Detalles</p>
-                  <div className="px-1 pb-1 flex flex-col divide-y divide-border">
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Detalles</p>
+                  <div className="-mx-1 flex flex-col divide-y divide-border">
 
                 {/* Especialidad */}
                 <PropRow
@@ -620,7 +620,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                 </div>{/* end properties card */}
 
                 {/* Autorización EPS + Orden card */}
-                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <div>
                   <button
                     onClick={() => setOpenAuth(v => !v)}
@@ -765,7 +765,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
 
                 {/* Audio de la cita */}
                 {audioSignedUrl && (
-                  <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+                  <div className="bg-card rounded-xl border border-border p-4">
                     <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <Mic size={12} />Nota de voz
                     </p>
