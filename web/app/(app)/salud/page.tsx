@@ -819,7 +819,7 @@ function KanbanBoardView({
           <CalendarioView citas={citas} examenes={examenes} medicamentos={medicamentos} onVerPendientes={() => setCitasView("kanban")} />
         )}
         {!(activeBoard === "citas" && citasView === "calendario") && (
-        <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0 items-start" style={{ scrollbarWidth: "thin" }}>
+        <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0 items-start justify-center" style={{ scrollbarWidth: "thin" }}>
 
           {activeBoard === "citas" && (
             <>
@@ -1054,7 +1054,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="flex-1 min-w-[280px] max-w-[520px] flex flex-col rounded-2xl overflow-hidden max-h-[calc(100dvh-240px)]"
+      className="w-[320px] shrink-0 flex flex-col rounded-2xl overflow-hidden max-h-[calc(100dvh-240px)]"
       style={{
         background: isOver ? bg + "CC" : bg + "55",
         border: isOver ? `2px dashed ${color}66` : "1px solid rgba(0,0,0,0.05)",
