@@ -799,43 +799,43 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     </button>
                   )}
 
-                  {cita?.fecha_hora && new Date(cita.fecha_hora) < new Date() &&
-                   !cita.notas_post && !cita.audio_post_url && (
-                    <button
-                      onClick={handlePedirReporte}
-                      disabled={enviandoReporte || reporteEnviado}
-                      className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-70"
-                      style={reporteEnviado
-                        ? { background: "#22c55e", color: "#fff" }
-                        : { background: "#FFF3E0", color: "#e65100", border: "1.5px solid #FFB74D" }}
-                    >
-                      {reporteEnviado ? (
-                        <><Check size={15} strokeWidth={2.5} />Reporte solicitado</>
-                      ) : enviandoReporte ? (
-                        <><div className="w-4 h-4 rounded-full border-2 border-orange-300 border-t-orange-600 animate-spin" />Enviando…</>
-                      ) : (
-                        <><MessageSquare size={15} strokeWidth={2.5} />Pedir reporte al acompañante</>
+                  {/* Acciones secundarias — condicionales, menor peso visual */}
+                  {((cita?.fecha_hora && new Date(cita.fecha_hora) < new Date() && !cita.notas_post && !cita.audio_post_url) ||
+                    authsVinculadas.some(a => a.estado === "en_tramite")) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {cita?.fecha_hora && new Date(cita.fecha_hora) < new Date() &&
+                       !cita.notas_post && !cita.audio_post_url && (
+                        <button
+                          onClick={handlePedirReporte}
+                          disabled={enviandoReporte || reporteEnviado}
+                          className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-border text-muted-foreground hover:bg-muted/50 transition-all active:scale-[0.97] disabled:opacity-70"
+                        >
+                          {reporteEnviado ? (
+                            <><Check size={12} strokeWidth={2.5} className="text-green-600" />Reporte solicitado</>
+                          ) : enviandoReporte ? (
+                            <><div className="w-3 h-3 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />Enviando…</>
+                          ) : (
+                            <><MessageSquare size={12} />Pedir reporte</>
+                          )}
+                        </button>
                       )}
-                    </button>
-                  )}
 
-                  {authsVinculadas.some(a => a.estado === "en_tramite") && (
-                    <button
-                      onClick={handlePedirEstadoTramite}
-                      disabled={enviandoTramite || tramiteEnviado}
-                      className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-70"
-                      style={tramiteEnviado
-                        ? { background: "#22c55e", color: "#fff" }
-                        : { background: "#EDE7F6", color: "#6A3EA1" }}
-                    >
-                      {tramiteEnviado ? (
-                        <><Check size={15} strokeWidth={2.5} />Recordatorio enviado</>
-                      ) : enviandoTramite ? (
-                        <><div className="w-4 h-4 rounded-full border-2 border-purple-300 border-t-purple-700 animate-spin" />Enviando…</>
-                      ) : (
-                        <><Bell size={15} strokeWidth={2.5} />Pedir estado del trámite EPS</>
+                      {authsVinculadas.some(a => a.estado === "en_tramite") && (
+                        <button
+                          onClick={handlePedirEstadoTramite}
+                          disabled={enviandoTramite || tramiteEnviado}
+                          className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-border text-muted-foreground hover:bg-muted/50 transition-all active:scale-[0.97] disabled:opacity-70"
+                        >
+                          {tramiteEnviado ? (
+                            <><Check size={12} strokeWidth={2.5} className="text-green-600" />Enviado</>
+                          ) : enviandoTramite ? (
+                            <><div className="w-3 h-3 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />Enviando…</>
+                          ) : (
+                            <><Bell size={12} />Estado del trámite EPS</>
+                          )}
+                        </button>
                       )}
-                    </button>
+                    </div>
                   )}
                 </div>
 
