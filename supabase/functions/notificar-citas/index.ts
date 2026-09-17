@@ -76,14 +76,42 @@ function diasHabilesDesde(fechaStr: string): number {
   }
   return days;
 }
-function diasRestantes(fechaOrdenStr: string): number {
+function diasRestantes(fechaOrdenStr: string, vigenciaDias = 120): number {
   const venc = new Date(fechaOrdenStr + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigenciaDias);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 function diasDesde(fechaStr: string): number {
   const from = new Date(fechaStr + "T12:00:00");
   return Math.floor((Date.now() - from.getTime()) / 86400000);
+}
+
+type NotifParams = {
+  tipo: "recordatorio_wa" | "reporte_cita" | "autorizacion_aprobada" | "autorizacion_por_vencer" | "entrega_vencida";
+  titulo: string;
+  mensaje?: string;
+  entidad_tipo?: "cita" | "examen" | "medicamento" | "autorizacion";
+  entidad_id?: string;
+  dedupe?: boolean; // si true, no inserta si ya existe una notificación igual para esa entidad
+};
+
+async function crearNotificacion(sb: ReturnType<typeof createClient>, p: NotifParams) {
+  if (p.dedupe && p.entidad_id) {
+    const { data: existente } = await sb.from("notificaciones")
+      .select("id")
+      .eq("tipo", p.tipo)
+      .eq("entidad_id", p.entidad_id)
+      .limit(1)
+      .maybeSingle();
+    if (existente) return;
+  }
+  await sb.from("notificaciones").insert({
+    tipo: p.tipo,
+    titulo: p.titulo,
+    mensaje: p.mensaje ?? null,
+    entidad_tipo: p.entidad_tipo ?? null,
+    entidad_id: p.entidad_id ?? null,
+  });
 }
 
 async function getRecipientes(sb: ReturnType<typeof createClient>, createdBy?: string | null) {
@@ -199,6 +227,13 @@ serve(async (req) => {
 
         if (citaOk) {
           await sb.from("citas").update({ recordatorio_enviado: true }).eq("id", c.id);
+          await crearNotificacion(sb, {
+            tipo: "recordatorio_wa",
+            titulo: "Recordatorio de WhatsApp enviado",
+            mensaje: `${esp} · ${fecha}`,
+            entidad_tipo: "cita",
+            entidad_id: c.id,
+          });
         }
       }
 
@@ -214,6 +249,7 @@ serve(async (req) => {
         const acompNom = acomp?.nombre ?? "sin asignar";
         const destinos = todos.filter((m: { telefono: string | null }) => m.telefono);
 
+        let examOk = false;
         for (const m of destinos) {
           const ok = await enviarWA(m.telefono!, "cita_lucy_recordatorio_manual", [
             { name: "nombre",       value: m.nombre },
@@ -223,7 +259,16 @@ serve(async (req) => {
             { name: "lugar",        value: lugar },
             { name: "acompanante",  value: acompNom },
           ], lugarUrl);
-          if (ok) enviados++;
+          if (ok) { enviados++; examOk = true; }
+        }
+        if (examOk) {
+          await crearNotificacion(sb, {
+            tipo: "recordatorio_wa",
+            titulo: "Recordatorio de WhatsApp enviado",
+            mensaje: `${esp} · ${fecha}`,
+            entidad_tipo: "examen",
+            entidad_id: e.id,
+          });
         }
       }
 
@@ -334,6 +379,15 @@ serve(async (req) => {
       }
 
       await sb.from("citas").update({ recordatorio_enviado: true }).eq("id", cita_id);
+      if (enviados > 0) {
+        await crearNotificacion(sb, {
+          tipo: "recordatorio_wa",
+          titulo: "Recordatorio de WhatsApp enviado",
+          mensaje: `${esp} · ${fecha}`,
+          entidad_tipo: "cita",
+          entidad_id: cita_id,
+        });
+      }
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -366,6 +420,15 @@ serve(async (req) => {
         ], lugarUrl) && enviados++;
       }
 
+      if (enviados > 0) {
+        await crearNotificacion(sb, {
+          tipo: "recordatorio_wa",
+          titulo: "Recordatorio de WhatsApp enviado",
+          mensaje: `${examen.nombre} · ${fecha}`,
+          entidad_tipo: "examen",
+          entidad_id: examen_id,
+        });
+      }
       return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -385,7 +448,7 @@ serve(async (req) => {
           if (creator) receptores.push(creator);
         }
         if (receptores.length === 0) continue;
-        const diasRestant = diasRestantes(a.fecha_orden);
+        const diasRestant = diasRestantes(a.fecha_orden, a.vigencia_dias ?? 120);
 
         if (a.estado === "sin_gestionar" && diasRestant > 0 && diasRestant <= 30) {
           for (const m of receptores) {
@@ -397,6 +460,17 @@ serve(async (req) => {
             ]);
             if (ok) enviados++;
           }
+        }
+
+        if (diasRestant > 0 && diasRestant <= 15) {
+          await crearNotificacion(sb, {
+            tipo: "autorizacion_por_vencer",
+            titulo: "Autorización EPS por vencer",
+            mensaje: `${a.descripcion} · vence en ${diasRestant}d`,
+            entidad_tipo: "autorizacion",
+            entidad_id: a.id,
+            dedupe: true,
+          });
         }
 
         if (a.estado === "en_tramite" && a.fecha_envio_eps) {
@@ -628,6 +702,28 @@ serve(async (req) => {
           ]);
           if (ok) enviados++;
         }
+      }
+
+      // ── Entregas vencidas sin reclamar (notificación in-app, deduplicada) ──
+      const hoyStr = new Date(ahoraBogota).toISOString().split("T")[0];
+      const { data: entregasVencidas } = await sb
+        .from("entregas_medicamento")
+        .select("*, medicamento:medicamento_id(id, nombre)")
+        .eq("estado", "pendiente")
+        .not("fecha_programada", "is", null)
+        .lt("fecha_programada", hoyStr);
+
+      for (const entrega of entregasVencidas ?? []) {
+        const med = entrega.medicamento as { id: string; nombre: string } | null;
+        if (!med) continue;
+        await crearNotificacion(sb, {
+          tipo: "entrega_vencida",
+          titulo: "Entrega de medicamento vencida sin reclamar",
+          mensaje: `${med.nombre} · entrega ${entrega.numero_entrega} · ${fechaCorta(entrega.fecha_programada)}`,
+          entidad_tipo: "medicamento",
+          entidad_id: med.id,
+          dedupe: true,
+        });
       }
 
       return new Response(JSON.stringify({ ok: true, tipo, entregasNotificadas: enviados }), { headers: { ...cors, "Content-Type": "application/json" } });

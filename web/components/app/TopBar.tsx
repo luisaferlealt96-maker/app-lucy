@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell } from "lucide-react";
+import { NotificationBell } from "@/components/app/NotificationBell";
 
 const PAGE_TITLES: Record<string, string> = {
   "/inicio": "Inicio",
@@ -28,9 +28,7 @@ export function TopBar() {
       <h1 className="text-base font-bold text-foreground">{title}</h1>
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-foreground">{todayCapitalized}</span>
-        <button className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
-          <Bell size={16} className="text-muted-foreground" />
-        </button>
+        <NotificationBell />
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white"
           style={{ background: "#9B8EC4" }}

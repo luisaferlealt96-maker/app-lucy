@@ -16,6 +16,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
+import { crearNotificacion } from "@/lib/supabase/notificaciones";
 import { uploadArchivoCita, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
 import { formatFechaHora } from "@/lib/utils/fecha";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
@@ -229,6 +230,14 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
       setAudioPostSignedUrl(signed);
     }
     setTimeout(() => setSaved(false), 2000);
+
+    crearNotificacion({
+      tipo: "reporte_cita",
+      titulo: `${cita.acompanante?.nombre ?? "El acompañante"} subió el reporte de la cita`,
+      mensaje: cita.nombre || cita.especialidad,
+      entidad_tipo: "cita",
+      entidad_id: id,
+    }).catch(() => {});
   };
 
   // fieldChanged is passed to decide whether to send WA notification
@@ -277,7 +286,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     setSavingAuth(true);
     const supabase = createClient();
     const hoy = new Date().toISOString().split("T")[0];
-    await supabase.from("autorizaciones_eps").insert({
+    const { data: nuevaAuth } = await supabase.from("autorizaciones_eps").insert({
       paciente_id: cita.paciente_id,
       descripcion: cita.nombre ?? cita.especialidad,
       tipo: "cita" as const,
@@ -289,11 +298,21 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
       nombre_prestador: addAuthForm.nombre_prestador.trim() || null,
       telefono_prestador: addAuthForm.telefono_prestador.trim() || null,
       cita_id: id,
-    });
+    }).select("id").single();
     setSavingAuth(false);
     setShowAddAuth(false);
     setAddAuthForm({ numero: "", nombre_prestador: "", telefono_prestador: "" });
     await cargar();
+
+    if (nuevaAuth) {
+      crearNotificacion({
+        tipo: "autorizacion_aprobada",
+        titulo: "Autorización EPS aprobada",
+        mensaje: `N° ${addAuthForm.numero.trim()} · ${cita.nombre ?? cita.especialidad}`,
+        entidad_tipo: "autorizacion",
+        entidad_id: nuevaAuth.id,
+      }).catch(() => {});
+    }
   };
 
   const { fecha, hora } = (cita?.fecha_hora)

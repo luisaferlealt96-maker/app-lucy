@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
+import { crearNotificacion } from "@/lib/supabase/notificaciones";
 import { uploadDocumentoMedico, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Examen, AutorizacionEPS, MiembroFamilia } from "@/lib/supabase/types";
@@ -206,7 +207,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     setSavingAuth(true);
     const supabase = createClient();
     const hoy = new Date().toISOString().split("T")[0];
-    await supabase.from("autorizaciones_eps").insert({
+    const { data: nuevaAuth } = await supabase.from("autorizaciones_eps").insert({
       paciente_id: examen.paciente_id,
       descripcion: examen.nombre,
       tipo: examen.tipo as "cita" | "examen" | "laboratorio" | "procedimiento",
@@ -218,11 +219,21 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
       nombre_prestador: addAuthForm.nombre_prestador.trim() || null,
       telefono_prestador: addAuthForm.telefono_prestador.trim() || null,
       examen_id: id,
-    });
+    }).select("id").single();
     setSavingAuth(false);
     setShowAddAuth(false);
     setAddAuthForm({ numero: "", nombre_prestador: "", telefono_prestador: "" });
     await cargar();
+
+    if (nuevaAuth) {
+      crearNotificacion({
+        tipo: "autorizacion_aprobada",
+        titulo: "Autorización EPS aprobada",
+        mensaje: `N° ${addAuthForm.numero.trim()} · ${examen.nombre}`,
+        entidad_tipo: "autorizacion",
+        entidad_id: nuevaAuth.id,
+      }).catch(() => {});
+    }
   };
 
   if (loading) {

@@ -130,6 +130,26 @@ export interface AutorizacionEPS {
   examen?: Pick<Examen, "id" | "nombre" | "tipo"> | null;
 }
 
+export type TipoNotificacion =
+  | "recordatorio_wa"
+  | "reporte_cita"
+  | "autorizacion_aprobada"
+  | "autorizacion_por_vencer"
+  | "entrega_vencida";
+
+export type EntidadNotificacion = "cita" | "examen" | "medicamento" | "autorizacion";
+
+export interface Notificacion {
+  id: string;
+  tipo: TipoNotificacion;
+  titulo: string;
+  mensaje: string | null;
+  entidad_tipo: EntidadNotificacion | null;
+  entidad_id: string | null;
+  leida: boolean;
+  created_at: string;
+}
+
 export interface NotaSeguimiento {
   id: string;
   created_at: string;

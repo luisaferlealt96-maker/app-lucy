@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/client";
+import { crearNotificacion } from "@/lib/supabase/notificaciones";
 import { cn } from "@/lib/utils";
 import type { AutorizacionEPS } from "@/lib/supabase/types";
 
@@ -100,6 +101,7 @@ export default function AutorizacionesPage() {
     if (!selected) return;
     setSaving(true);
     const supabase = createClient();
+    const yaEstabaAprobada = selected.estado === "autorizada" && !!selected.numero_autorizacion;
     await supabase.from("autorizaciones_eps").update({
       estado:              editForm.estado,
       fecha_envio_eps:     editForm.fecha_envio_eps     || null,
@@ -113,6 +115,16 @@ export default function AutorizacionesPage() {
     setSaving(false);
     setSaved(true);
     setTimeout(() => { setSaved(false); setSelected(null); cargar(); }, 900);
+
+    if (!yaEstabaAprobada && editForm.estado === "autorizada" && editForm.numero_autorizacion.trim()) {
+      crearNotificacion({
+        tipo: "autorizacion_aprobada",
+        titulo: "Autorización EPS aprobada",
+        mensaje: `N° ${editForm.numero_autorizacion.trim()} · ${selected.descripcion}`,
+        entidad_tipo: "autorizacion",
+        entidad_id: selected.id,
+      }).catch(() => {});
+    }
   };
 
   const eliminar = async (id: string) => {

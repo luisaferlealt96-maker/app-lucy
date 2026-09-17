@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
+import { crearNotificacion } from "@/lib/supabase/notificaciones";
 import type { AutorizacionEPS, TipoAutorizacion, EstadoAutorizacion } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -105,6 +106,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
     if (!editForm.descripcion.trim() || !editForm.fecha_orden) return;
     setSaving(true);
     const supabase = createClient();
+    const yaEstabaAprobada = auth?.estado === "autorizada" && !!auth?.numero_autorizacion;
     await supabase.from("autorizaciones_eps").update({
       descripcion:         editForm.descripcion.trim(),
       tipo:                editForm.tipo,
@@ -122,6 +124,16 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
     setEditingField(null);
     await cargar();
     setTimeout(() => setSaved(false), 2000);
+
+    if (!yaEstabaAprobada && editForm.estado === "autorizada" && editForm.numero_autorizacion.trim()) {
+      crearNotificacion({
+        tipo: "autorizacion_aprobada",
+        titulo: "Autorización EPS aprobada",
+        mensaje: `N° ${editForm.numero_autorizacion.trim()} · ${editForm.descripcion.trim()}`,
+        entidad_tipo: "autorizacion",
+        entidad_id: id,
+      }).catch(() => {});
+    }
   };
 
   const handleCambiarEstado = async (estado: EstadoAutorizacion) => {
