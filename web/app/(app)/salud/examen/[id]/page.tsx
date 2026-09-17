@@ -4,20 +4,22 @@ import { use, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  ArrowLeft, FlaskConical, FileText, Upload, Trash2,
-  MapPin, Calendar, Check, ExternalLink, Clock, X, Pencil, Shield, Users, Bell,
-  Building2, Phone,
+  ArrowLeft, FileText, Upload, Trash2,
+  MapPin, Calendar, Check, ExternalLink, Clock, X, Shield, User, Bell,
+  Building2, Phone, Edit3, ChevronDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { uploadDocumentoMedico, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Examen, AutorizacionEPS, MiembroFamilia } from "@/lib/supabase/types";
 import { useMiembros } from "@/hooks/useSalud";
+import { cn } from "@/lib/utils";
 
 const TIPO_LABEL: Record<string, string> = {
   laboratorio: "Laboratorio",
@@ -25,9 +27,11 @@ const TIPO_LABEL: Record<string, string> = {
   procedimiento: "Procedimiento",
 };
 
-const ESTADO_COLOR: Record<string, { bg: string; color: string }> = {
-  pendiente: { bg: "#FFF3E0", color: "#e65100" },
-  listo:     { bg: "#E8F5E9", color: "#2e7d32" },
+const ACCENT = "#9B8EC4";
+
+const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pendiente: { label: "Pendiente",  color: "#e65100", bg: "#FFF3E0" },
+  listo:     { label: "Realizado",  color: "#2e7d32", bg: "#E8F5E9" },
 };
 
 export default function ExamenDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,8 +45,9 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
   const [notificado, setNotificado] = useState(false);
   const { miembros } = useMiembros();
 
-  // Editar
-  const [showEdit, setShowEdit] = useState(false);
+  // ClickUp-style inline editing
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [showEstadoMenu, setShowEstadoMenu] = useState(false);
 
   // Agregar autorización rápida
   const [showAddAuth, setShowAddAuth] = useState(false);
@@ -130,7 +135,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     if (url) window.open(url, "_blank");
   };
 
-  const cambiarEstado = async (estado: "pendiente" | "en_proceso" | "listo") => {
+  const handleCambiarEstado = async (estado: "pendiente" | "listo") => {
+    setShowEstadoMenu(false);
     if (!examen) return;
     const supabase = createClient();
     const hoy = new Date().toISOString().split("T")[0];
@@ -138,7 +144,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     if (estado === "listo" && !examen.fecha_realizacion) updates.fecha_realizacion = hoy;
     if (estado !== "listo") updates.fecha_realizacion = null;
     await supabase.from("examenes").update(updates).eq("id", examen.id);
-    await cargar();
+    setExamen(e => e ? { ...e, estado, fecha_realizacion: updates.fecha_realizacion ?? e.fecha_realizacion } : e);
   };
 
   const handleEliminar = async () => {
@@ -165,30 +171,31 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     setTimeout(() => setNotificado(false), 3000);
   };
 
-  const handleGuardarEdicion = async () => {
-    if (!examen || !editForm.nombre) return;
+  // fieldChanged decides whether to send WA notification
+  const handleGuardarEdicion = async (fieldChanged?: string) => {
+    if (!examen || !editForm.nombre.trim()) return;
     setSavingEdit(true);
     const supabase = createClient();
     const estadoAntes = examen.estado;
     const tenieFecha = !!examen.fecha_solicitud;
     await supabase.from("examenes").update({
-      nombre: editForm.nombre,
+      nombre: editForm.nombre.trim(),
       tipo: editForm.tipo,
-      especialidad: editForm.especialidad || null,
+      especialidad: editForm.especialidad.trim() || null,
       fecha_solicitud: editForm.fecha_solicitud || null,
       hora: editForm.hora || null,
-      lugar: editForm.lugar || null,
+      lugar: editForm.lugar.trim() || null,
       acompanante_id: editForm.acompanante_id || null,
-      notas: editForm.notas || null,
+      notas: editForm.notas.trim() || null,
     }).eq("id", id);
     setSavingEdit(false);
     setSavedEdit(true);
-    setShowEdit(false);
+    setEditingField(null);
     await cargar();
     setTimeout(() => setSavedEdit(false), 2000);
 
-    // Notificar cuando se asigna o cambia la fecha de un examen con estado pendiente
-    if (editForm.fecha_solicitud && (estadoAntes === "pendiente" || !tenieFecha)) {
+    const dateChanged = fieldChanged === "fecha_solicitud" || fieldChanged === "hora";
+    if (dateChanged && editForm.fecha_solicitud && (estadoAntes === "pendiente" || !tenieFecha)) {
       createClient().functions.invoke("notificar-citas", { body: { tipo: "manual_examen", examen_id: id } })
         .catch((e) => console.error("WA examen agendado:", e));
     }
@@ -220,8 +227,10 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-background flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#9B8EC4] border-t-transparent animate-spin" />
+      <div className="min-h-dvh bg-background pb-20 max-w-lg md:max-w-2xl mx-auto pt-6 px-4 flex flex-col gap-3">
+        <Skeleton className="h-8 w-1/3 rounded-lg" />
+        <Skeleton className="h-10 w-2/3 rounded-lg" />
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)}
       </div>
     );
   }
@@ -235,127 +244,328 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const estadoStyle = ESTADO_COLOR[examen.estado] ?? ESTADO_COLOR["pendiente"];
+  const estadoCfg = ESTADO_CONFIG[examen.estado === "en_proceso" ? "pendiente" : examen.estado] ?? ESTADO_CONFIG.pendiente;
   const fechaTexto = examen.fecha_solicitud
-    ? new Date(examen.fecha_solicitud + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-    : null;
+    ? new Date(examen.fecha_solicitud + "T12:00:00").toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
+    : undefined;
+  const horaTexto = examen.hora
+    ? (() => { const [h, m] = examen.hora!.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr === 0 ? 12 : hr}:${m} ${hr >= 12 ? "p.m." : "a.m."}`; })()
+    : undefined;
+  const acompanantes = miembros.filter(m => m.rol !== "abuela");
 
   return (
-    <div className="min-h-dvh bg-background pb-20 max-w-lg md:max-w-2xl mx-auto">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-        className="px-4 pt-12 pb-5" style={{ background: "#EDE9F7" }}>
-        <button onClick={() => router.back()} className="flex items-center gap-1.5 mb-4">
-          <ArrowLeft size={18} color="#9B8EC4" strokeWidth={2.5} />
-          <span className="text-sm font-semibold" style={{ color: "#9B8EC4" }}>Salud</span>
-        </button>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-              style={{ background: "#9B8EC422", color: "#9B8EC4" }}>
-              {TIPO_LABEL[examen.tipo] ?? examen.tipo}
-            </span>
-            <h1 className="text-xl font-extrabold text-foreground mt-1 leading-tight">{examen.nombre}</h1>
-            {examen.especialidad && <p className="text-sm text-muted-foreground mt-0.5">{examen.especialidad}</p>}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setShowEdit(true)}
-              className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
-              style={{ background: "rgba(255,255,255,0.5)", color: "#9B8EC4" }}
+    <div className="min-h-dvh bg-background pb-24" onClick={() => showEstadoMenu && setShowEstadoMenu(false)}>
+
+      {/* Sticky top bar */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          <button onClick={() => router.back()} className="flex items-center gap-1.5 shrink-0">
+            <ArrowLeft size={18} style={{ color: ACCENT }} strokeWidth={2.5} />
+            <span className="text-sm font-semibold" style={{ color: ACCENT }}>Salud</span>
+          </button>
+
+          <div className="relative" onClick={e => e.stopPropagation()}>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowEstadoMenu(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+              style={{ background: estadoCfg.bg, color: estadoCfg.color }}
             >
-              <Pencil size={12} strokeWidth={2.5} />
-              Editar
-            </button>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: estadoStyle.bg, color: estadoStyle.color }}>
-              {examen.estado === "listo" ? "Realizado" : "Pendiente"}
-            </span>
+              {estadoCfg.label}
+              <ChevronDown size={11} strokeWidth={2.5} />
+            </motion.button>
+            <AnimatePresence>
+              {showEstadoMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-full mt-1.5 bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-30 min-w-[140px]"
+                >
+                  {Object.entries(ESTADO_CONFIG).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      onClick={() => handleCambiarEstado(key as "pendiente" | "listo")}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold hover:bg-muted/60 transition-colors text-left"
+                      style={{ color: cfg.color }}
+                    >
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+                      {cfg.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      <div className="px-4 pt-4 flex flex-col gap-4">
-
-        {savedEdit && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl px-4 py-3 flex items-center gap-2" style={{ background: "#EDE9F7" }}>
-            <Check size={15} color="#9B8EC4" strokeWidth={2.5} />
-            <p className="text-sm font-semibold" style={{ color: "#9B8EC4" }}>Procedimiento actualizado</p>
-          </motion.div>
-        )}
-
-        {/* Info */}
-        {(fechaTexto || !fechaTexto || examen.lugar || examen.notas) && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-            className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2.5">
-            {fechaTexto ? (
-              <div className="flex items-center gap-2.5">
-                <Calendar size={15} className="text-muted-foreground shrink-0" />
-                <span className="text-sm text-foreground capitalize">{fechaTexto}</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <Clock size={15} style={{ color: "#e65100" }} className="shrink-0" />
-                  <span className="text-sm font-semibold" style={{ color: "#e65100" }}>Pendiente por agendar</span>
-                </div>
-                <button
-                  onClick={() => setShowEdit(true)}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-[0.97]"
-                  style={{ background: "#e65100", color: "#fff" }}
-                >
-                  Agendar
+      <div className="max-w-2xl mx-auto px-4">
+        {/* Title block */}
+        <div className="pt-5 pb-2">
+          {editingField === "tipo" ? (
+            <div className="flex flex-col gap-1.5 mb-1.5 max-w-[220px]">
+              <Select
+                value={editForm.tipo}
+                onValueChange={v => setEditForm(f => ({ ...f, tipo: v as typeof editForm.tipo }))}
+              >
+                <SelectTrigger className="h-8 rounded-lg border-border bg-card text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="laboratorio">Laboratorio</SelectItem>
+                  <SelectItem value="examen">Examen diagnóstico</SelectItem>
+                  <SelectItem value="procedimiento">Procedimiento</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex gap-1.5">
+                <button onClick={() => handleGuardarEdicion("tipo")}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white"
+                  style={{ background: ACCENT }}>
+                  <Check size={11} />Guardar
+                </button>
+                <button onClick={() => setEditingField(null)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border text-muted-foreground">
+                  <X size={11} />Cancelar
                 </button>
               </div>
-            )}
-            {examen.hora && (
-              <div className="flex items-center gap-2.5">
-                <Clock size={15} className="text-muted-foreground shrink-0" />
-                <span className="text-sm text-foreground">
-                  {(() => { const [h, m] = examen.hora!.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr === 0 ? 12 : hr}:${m} ${hr >= 12 ? "p.m." : "a.m."}`; })()}
-                </span>
-              </div>
-            )}
-            {examen.lugar && (
-              <div className="flex items-center gap-2.5">
-                <MapPin size={15} className="text-muted-foreground shrink-0" />
-                <a href={`https://maps.google.com/?q=${encodeURIComponent(examen.lugar)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="text-sm text-foreground underline-offset-2 hover:underline flex items-center gap-1">
-                  {examen.lugar}
-                  <ExternalLink size={11} className="text-muted-foreground" />
-                </a>
-              </div>
-            )}
-            {examen.acompanante && (
-              <div className="flex items-center gap-2.5">
-                <Users size={15} className="text-muted-foreground shrink-0" />
-                <span className="text-sm text-foreground">{(examen.acompanante as MiembroFamilia).nombre}</span>
-              </div>
-            )}
-            {examen.notas && (
-              <p className="text-sm text-muted-foreground border-t border-border pt-2.5 mt-0.5">{examen.notas}</p>
-            )}
+            </div>
+          ) : (
+            <button onClick={() => setEditingField("tipo")} className="inline-flex mb-1.5">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: ACCENT + "22", color: ACCENT }}>
+                {TIPO_LABEL[examen.tipo] ?? examen.tipo}
+              </span>
+            </button>
+          )}
+
+          {editingField === "nombre" ? (
+            <div className="flex items-center gap-2">
+              <Input
+                autoFocus
+                value={editForm.nombre}
+                onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))}
+                placeholder="Nombre del examen/procedimiento"
+                className="text-xl font-extrabold h-11 rounded-xl border-border bg-card flex-1"
+                onKeyDown={e => {
+                  if (e.key === "Enter") handleGuardarEdicion("nombre");
+                  if (e.key === "Escape") setEditingField(null);
+                }}
+              />
+              <button onClick={() => handleGuardarEdicion("nombre")}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0"
+                style={{ background: ACCENT }}>
+                <Check size={15} />
+              </button>
+              <button onClick={() => setEditingField(null)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center border border-border shrink-0">
+                <X size={14} className="text-muted-foreground" />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setEditingField("nombre")} className="text-left group flex items-start gap-2 w-full">
+              <h1 className="text-2xl font-extrabold text-foreground leading-tight">{examen.nombre}</h1>
+              <Edit3 size={14} className="mt-2 opacity-0 group-hover:opacity-30 transition-opacity text-muted-foreground shrink-0" />
+            </button>
+          )}
+        </div>
+
+        {savedEdit && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-40 rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-lg"
+            style={{ background: "#EDE9F7" }}
+          >
+            <Check size={13} color={ACCENT} strokeWidth={2.5} />
+            <p className="text-sm font-semibold" style={{ color: ACCENT }}>Guardado</p>
           </motion.div>
         )}
 
-        {/* Autorización EPS */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+        <div className="flex flex-col gap-3 mt-2">
+
+          {/* Pendiente por agendar banner */}
+          {!examen.fecha_solicitud && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl px-3.5 py-2.5 flex items-center gap-3"
+              style={{ background: "#FFF3E0", border: "1.5px solid #FFB74D" }}
+            >
+              <Clock size={14} color="#e65100" className="shrink-0" />
+              <p className="text-sm flex-1" style={{ color: "#e65100" }}>Falta asignar fecha</p>
+              <button
+                onClick={() => setEditingField("fecha_solicitud")}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-white"
+                style={{ background: "#e65100" }}
+              >
+                Agendar
+              </button>
+            </motion.div>
+          )}
+
+          {/* Properties card */}
+          <div className="bg-card rounded-xl border border-border p-4">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Detalles</p>
+            <div className="-mx-1 flex flex-col divide-y divide-border">
+
+              {/* Especialidad */}
+              <PropRow
+                icon={FileText}
+                label="Especialidad"
+                value={examen.especialidad || undefined}
+                placeholder="Sin especialidad"
+                isEditing={editingField === "especialidad"}
+                onStartEdit={() => setEditingField("especialidad")}
+                onSave={() => handleGuardarEdicion("especialidad")}
+                onCancel={() => setEditingField(null)}
+              >
+                <Input
+                  autoFocus
+                  value={editForm.especialidad}
+                  onChange={e => setEditForm(f => ({ ...f, especialidad: e.target.value }))}
+                  placeholder="Ej: Cardiología, Neurología"
+                  className="h-9 rounded-lg flex-1"
+                  onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("especialidad"); if (e.key === "Escape") setEditingField(null); }}
+                />
+              </PropRow>
+
+              {/* Fecha */}
+              <PropRow
+                icon={Calendar}
+                label="Fecha"
+                value={fechaTexto}
+                placeholder="Sin fecha"
+                isEditing={editingField === "fecha_solicitud"}
+                onStartEdit={() => setEditingField("fecha_solicitud")}
+                onSave={() => handleGuardarEdicion("fecha_solicitud")}
+                onCancel={() => setEditingField(null)}
+              >
+                <DatePicker
+                  value={editForm.fecha_solicitud}
+                  onChange={val => setEditForm(f => ({ ...f, fecha_solicitud: val }))}
+                  className="rounded-lg border-border bg-card h-9 w-full"
+                />
+              </PropRow>
+
+              {/* Hora */}
+              <PropRow
+                icon={Clock}
+                label="Hora"
+                value={horaTexto}
+                placeholder="Sin hora"
+                isEditing={editingField === "hora"}
+                onStartEdit={() => setEditingField("hora")}
+                onSave={() => handleGuardarEdicion("hora")}
+                onCancel={() => setEditingField(null)}
+              >
+                <Input
+                  type="time"
+                  autoFocus
+                  value={editForm.hora}
+                  onChange={e => setEditForm(f => ({ ...f, hora: e.target.value }))}
+                  className="h-9 rounded-lg border-border bg-card"
+                  onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("hora"); }}
+                />
+              </PropRow>
+
+              {/* Lugar */}
+              <PropRow
+                icon={MapPin}
+                label="Lugar"
+                value={examen.lugar || undefined}
+                placeholder="Sin asignar"
+                isEditing={editingField === "lugar"}
+                onStartEdit={() => setEditingField("lugar")}
+                onSave={() => handleGuardarEdicion("lugar")}
+                onCancel={() => setEditingField(null)}
+                mapsLink={examen.lugar ? `https://maps.google.com/?q=${encodeURIComponent(examen.lugar)}` : undefined}
+              >
+                <Input
+                  autoFocus
+                  value={editForm.lugar}
+                  onChange={e => setEditForm(f => ({ ...f, lugar: e.target.value }))}
+                  placeholder="Ej: Clínica del Country, Laboratorio Cafam"
+                  className="h-9 rounded-lg flex-1"
+                  onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("lugar"); }}
+                />
+              </PropRow>
+
+              {/* Acompañante */}
+              <PropRow
+                icon={User}
+                label="Acompañante"
+                value={(examen.acompanante as MiembroFamilia | undefined)?.nombre}
+                placeholder="Sin acompañante"
+                accent={!!examen.acompanante}
+                isEditing={editingField === "acompanante"}
+                onStartEdit={() => setEditingField("acompanante")}
+                onSave={() => handleGuardarEdicion("acompanante")}
+                onCancel={() => setEditingField(null)}
+              >
+                <Select
+                  value={editForm.acompanante_id ?? "none"}
+                  onValueChange={v => setEditForm(f => ({ ...f, acompanante_id: v === "none" ? null : v }))}
+                >
+                  <SelectTrigger className="h-9 rounded-lg border-border bg-card text-sm w-full">
+                    {(() => {
+                      const m = editForm.acompanante_id ? acompanantes.find(x => x.id === editForm.acompanante_id) : null;
+                      return (
+                        <span className={m ? "" : "text-muted-foreground"}>
+                          {m ? `${m.emoji ?? ""} ${m.nombre}`.trim() : "Sin acompañante"}
+                        </span>
+                      );
+                    })()}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin acompañante</SelectItem>
+                    {acompanantes.map(m => (
+                      <SelectItem key={m.id} value={m.id}>{m.emoji} {m.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </PropRow>
+
+              {/* Notas */}
+              <PropRow
+                icon={FileText}
+                label="Notas"
+                value={examen.notas || undefined}
+                placeholder="Sin notas"
+                isEditing={editingField === "notas"}
+                onStartEdit={() => setEditingField("notas")}
+                onSave={() => handleGuardarEdicion("notas")}
+                onCancel={() => setEditingField(null)}
+              >
+                <Textarea
+                  autoFocus
+                  value={editForm.notas}
+                  onChange={e => setEditForm(f => ({ ...f, notas: e.target.value }))}
+                  placeholder="Indicaciones de preparación, ayuno, etc."
+                  rows={2}
+                  className="rounded-lg text-sm resize-none flex-1"
+                />
+              </PropRow>
+
+            </div>
+          </div>
+
+          {/* Autorización EPS */}
           {authVinculada ? (
             <Link href={`/salud/autorizacion/${authVinculada.id}`}>
-              <div className="rounded-2xl p-4 flex flex-col gap-1 transition-all active:scale-[0.98] hover:opacity-90"
-                style={{ background: "#E8F5E9", border: "2px solid #4CAF50" }}>
+              <div className="rounded-xl p-3.5 flex flex-col gap-0.5 transition-all active:scale-[0.98]"
+                style={{ background: "#E8F5E9", border: "1.5px solid #4CAF50" }}>
                 <div className="flex items-center justify-between mb-0.5">
-                  <div className="flex items-center gap-2">
-                    <Shield size={14} color="#2e7d32" strokeWidth={2.5} />
-                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#2e7d32" }}>
+                  <div className="flex items-center gap-1.5">
+                    <Shield size={13} color="#2e7d32" strokeWidth={2.5} />
+                    <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#2e7d32" }}>
                       Autorización EPS aprobada
                     </p>
                   </div>
-                  <ExternalLink size={13} color="#2e7d32" />
+                  <ExternalLink size={12} color="#2e7d32" />
                 </div>
-                <p className="text-2xl font-extrabold" style={{ color: "#2e7d32" }}>
+                <p className="text-xl font-extrabold" style={{ color: "#2e7d32" }}>
                   N° {authVinculada.numero_autorizacion}
                 </p>
                 {authVinculada.descripcion && (
@@ -364,7 +574,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </Link>
           ) : (
-            <div className="rounded-2xl p-4 border border-dashed border-border bg-card flex items-center justify-between gap-3">
+            <div className="rounded-xl p-3.5 border border-dashed border-border bg-card flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Shield size={15} className="text-muted-foreground shrink-0" />
                 <p className="text-sm text-muted-foreground">¿Ya tienes número de autorización?</p>
@@ -372,295 +582,111 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
               <button
                 onClick={() => setShowAddAuth(true)}
                 className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-white transition-all active:scale-[0.97]"
-                style={{ background: "#9B8EC4" }}
+                style={{ background: ACCENT }}
               >
                 Agregar
               </button>
             </div>
           )}
-        </motion.div>
 
-        {/* Orden médica */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Orden médica</p>
-          <PDFSlot
-            label="Orden médica"
-            storagePath={examen.archivo_orden_url}
-            uploading={uploadingOrden}
-            onUpload={f => handleUpload(f, "orden")}
-            onDelete={() => handleDelete("orden")}
-            onView={() => examen.archivo_orden_url && abrirPDF(examen.archivo_orden_url)}
-            accentColor="#9B8EC4"
-            accentBg="#EDE9F7"
-          />
-        </motion.div>
-
-        {/* Resultado */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}>
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Resultado</p>
-          <PDFSlot
-            label="Resultado"
-            storagePath={examen.archivo_resultado_url}
-            uploading={uploadingResultado}
-            onUpload={f => handleUpload(f, "resultado")}
-            onDelete={() => handleDelete("resultado")}
-            onView={() => examen.archivo_resultado_url && abrirPDF(examen.archivo_resultado_url)}
-            accentColor="#2E7D6A"
-            accentBg="#E8F5E9"
-            hint={!examen.archivo_resultado_url ? "Al subir el resultado se marca el examen como Listo automáticamente." : undefined}
-          />
-        </motion.div>
-
-        {/* Cambiar estado */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Estado</p>
-          <div className="flex gap-2">
-            {(["pendiente", "listo"] as const).map(e => {
-              const s = ESTADO_COLOR[e];
-              const active = examen.estado === e || (e === "pendiente" && examen.estado === "en_proceso");
-              return (
-                <button key={e} onClick={() => cambiarEstado(e)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold border-2 transition-all"
-                  style={active
-                    ? { background: s.bg, color: s.color, borderColor: s.color }
-                    : { background: "var(--card)", color: "var(--muted-foreground)", borderColor: "var(--border)" }}>
-                  {e === "listo" ? "Realizado" : "Pendiente"}
-                </button>
-              );
-            })}
+          {/* Documentos card */}
+          <div className="bg-card rounded-xl border border-border p-4 flex flex-col gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Orden médica</p>
+              <PDFSlot
+                label="Orden médica"
+                storagePath={examen.archivo_orden_url}
+                uploading={uploadingOrden}
+                onUpload={f => handleUpload(f, "orden")}
+                onDelete={() => handleDelete("orden")}
+                onView={() => examen.archivo_orden_url && abrirPDF(examen.archivo_orden_url)}
+                accentColor={ACCENT}
+                accentBg="#EDE9F7"
+              />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Resultado</p>
+              <PDFSlot
+                label="Resultado"
+                storagePath={examen.archivo_resultado_url}
+                uploading={uploadingResultado}
+                onUpload={f => handleUpload(f, "resultado")}
+                onDelete={() => handleDelete("resultado")}
+                onView={() => examen.archivo_resultado_url && abrirPDF(examen.archivo_resultado_url)}
+                accentColor="#2E7D6A"
+                accentBg="#E8F5E9"
+                hint={!examen.archivo_resultado_url ? "Al subir el resultado se marca como Realizado automáticamente." : undefined}
+              />
+            </div>
           </div>
-        </motion.div>
 
-        {/* Enviar recordatorio */}
-        {examen.acompanante_id && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-            {notificado ? (
-              <div className="w-full h-11 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold"
-                style={{ background: "#E8F5E9", color: "#2e7d32" }}>
-                <Check size={15} strokeWidth={2.5} />
-                Recordatorio enviado
-              </div>
-            ) : (
-              <button
-                onClick={handleEnviarRecordatorio}
-                disabled={notificando}
-                className="w-full h-11 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-60"
-                style={{ background: "#EDE9F7", color: "#9B8EC4" }}
-              >
-                <Bell size={15} strokeWidth={2} />
-                {notificando ? "Enviando…" : "Enviar recordatorio por WhatsApp"}
-              </button>
-            )}
-          </motion.div>
-        )}
-
-        {/* Seguimiento — notas con fecha y hora */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-          <NotasSeguimiento
-            examenId={id}
-            accentColor="#9B8EC4"
-            accentBg="#EDE9F7"
-          />
-        </motion.div>
-
-        {/* Eliminar */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }}>
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-full h-11 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
-              style={{ background: "#FFF0F0", color: "#c62828" }}
-            >
-              <Trash2 size={15} strokeWidth={2} />
-              Eliminar procedimiento
-            </button>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border-2 p-4 flex flex-col gap-3"
-              style={{ borderColor: "#c62828", background: "#FFF0F0" }}
-            >
-              <p className="text-sm font-bold text-center" style={{ color: "#c62828" }}>¿Eliminar este procedimiento?</p>
-              <p className="text-xs text-center text-muted-foreground">Esta acción no se puede deshacer.</p>
-              <div className="flex gap-2">
+          {/* Enviar recordatorio */}
+          {examen.acompanante_id && (
+            <div>
+              {notificado ? (
+                <div className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold"
+                  style={{ background: "#E8F5E9", color: "#2e7d32" }}>
+                  <Check size={15} strokeWidth={2.5} />
+                  Recordatorio enviado
+                </div>
+              ) : (
                 <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 h-11 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
+                  onClick={handleEnviarRecordatorio}
+                  disabled={notificando}
+                  className="w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-60"
+                  style={{ background: "#EDE9F7", color: ACCENT }}
                 >
-                  Cancelar
+                  <Bell size={15} strokeWidth={2} />
+                  {notificando ? "Enviando…" : "Enviar recordatorio por WhatsApp"}
                 </button>
-                <button
-                  onClick={handleEliminar}
-                  disabled={deleting}
-                  className="flex-1 h-11 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
-                  style={{ background: "#c62828" }}
-                >
-                  <Trash2 size={14} />
-                  {deleting ? "Eliminando…" : "Sí, eliminar"}
-                </button>
-              </div>
-            </motion.div>
+              )}
+            </div>
           )}
-        </motion.div>
-      </div>
 
-      {/* ── Bottom sheet: Editar procedimiento ── */}
-      <AnimatePresence>
-        {showEdit && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center"
-            style={{ background: "rgba(0,0,0,0.45)" }}
-            onClick={e => { if (e.target === e.currentTarget) setShowEdit(false); }}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="w-full max-w-lg md:max-w-2xl mx-auto bg-background rounded-t-3xl md:rounded-3xl px-4 pt-4 pb-10 md:pb-6 flex flex-col gap-4"
-              style={{ maxHeight: "92dvh", overflowY: "auto" }}
-            >
-              <div className="w-10 h-1 rounded-full bg-border mx-auto mb-1" />
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-extrabold text-foreground">Editar procedimiento</h2>
-                <button type="button" onClick={() => setShowEdit(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: "var(--secondary)" }}>
-                  <X size={16} className="text-muted-foreground" />
-                </button>
-              </div>
+          {/* Seguimiento */}
+          <NotasSeguimiento examenId={id} accentColor={ACCENT} accentBg="#EDE9F7" />
 
-              {/* Nombre */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Nombre</label>
-                <Input
-                  placeholder="Ej: Hemograma completo, Radiografía de tórax"
-                  value={editForm.nombre}
-                  onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))}
-                  className="rounded-xl border-border bg-card h-12"
-                />
-              </div>
-
-              {/* Tipo */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Tipo</label>
-                <Select
-                  value={editForm.tipo}
-                  onValueChange={v => setEditForm(f => ({ ...f, tipo: v as typeof editForm.tipo }))}
-                >
-                  <SelectTrigger className="rounded-xl border-border bg-card h-12">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="laboratorio">Laboratorio</SelectItem>
-                    <SelectItem value="examen">Examen diagnóstico</SelectItem>
-                    <SelectItem value="procedimiento">Procedimiento</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Especialidad */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Especialidad (opcional)</label>
-                <Input
-                  placeholder="Ej: Cardiología, Neurología"
-                  value={editForm.especialidad}
-                  onChange={e => setEditForm(f => ({ ...f, especialidad: e.target.value }))}
-                  className="rounded-xl border-border bg-card h-12"
-                />
-              </div>
-
-              {/* Fecha + Hora */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-foreground uppercase tracking-wide">Fecha (opcional)</label>
-                  <DatePicker
-                    value={editForm.fecha_solicitud}
-                    onChange={val => setEditForm(f => ({ ...f, fecha_solicitud: val }))}
-                    className="rounded-xl border-border bg-card"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-foreground uppercase tracking-wide">Hora (opcional)</label>
-                  <Input
-                    type="time"
-                    value={editForm.hora}
-                    onChange={e => setEditForm(f => ({ ...f, hora: e.target.value }))}
-                    className="rounded-xl border-border bg-card h-12"
-                  />
-                </div>
-              </div>
-
-              {/* Acompañante */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Acompañante (opcional)</label>
-                <Select
-                  value={editForm.acompanante_id ?? "none"}
-                  onValueChange={v => setEditForm(f => ({ ...f, acompanante_id: v === "none" ? null : v }))}
-                >
-                  <SelectTrigger className="rounded-xl border-border bg-card h-12">
-                    {(() => {
-                      const acompanantes = miembros.filter(m => m.rol !== "abuela");
-                      const m = editForm.acompanante_id ? acompanantes.find(x => x.id === editForm.acompanante_id) : null;
-                      return (
-                        <span className={`flex-1 text-left text-sm truncate${m ? "" : " text-muted-foreground"}`}>
-                          {m ? `${m.emoji ?? ""} ${m.nombre}`.trim() : "Sin acompañante"}
-                        </span>
-                      );
-                    })()}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin acompañante</SelectItem>
-                    {miembros.filter(m => m.rol !== "abuela").map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.emoji} {m.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Lugar */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Lugar (opcional)</label>
-                <div className="relative">
-                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Ej: Clínica del Country, Laboratorio Cafam"
-                    value={editForm.lugar}
-                    onChange={e => setEditForm(f => ({ ...f, lugar: e.target.value }))}
-                    className="rounded-xl border-border bg-card h-12 pl-9"
-                  />
-                </div>
-              </div>
-
-              {/* Notas */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Notas (opcional)</label>
-                <Textarea
-                  placeholder="Indicaciones de preparación, ayuno, etc."
-                  value={editForm.notas}
-                  onChange={e => setEditForm(f => ({ ...f, notas: e.target.value }))}
-                  rows={3}
-                  className="rounded-xl border-border resize-none text-sm"
-                />
-              </div>
-
+          {/* Eliminar */}
+          <div>
+            {!confirmDelete ? (
               <button
-                type="button"
-                onClick={handleGuardarEdicion}
-                disabled={!editForm.nombre || savingEdit}
-                className="w-full h-13 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.97] disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "#9B8EC4" }}
+                onClick={() => setConfirmDelete(true)}
+                className="w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
+                style={{ background: "#FFF0F0", color: "#c62828" }}
               >
-                {savingEdit ? "Guardando…" : <><Check size={16} strokeWidth={2.5} /> Guardar cambios</>}
+                <Trash2 size={14} strokeWidth={2} />Eliminar procedimiento
               </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border-2 p-4 flex flex-col gap-3"
+                style={{ borderColor: "#c62828", background: "#FFF0F0" }}
+              >
+                <p className="text-sm font-bold text-center" style={{ color: "#c62828" }}>¿Eliminar este procedimiento?</p>
+                <p className="text-xs text-center text-muted-foreground">Esta acción no se puede deshacer.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 h-10 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleEliminar}
+                    disabled={deleting}
+                    className="flex-1 h-10 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    style={{ background: "#c62828" }}
+                  >
+                    <Trash2 size={13} />
+                    {deleting ? "Eliminando…" : "Sí, eliminar"}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* ── Bottom sheet: Agregar autorización ── */}
       <AnimatePresence>
@@ -734,7 +760,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                 onClick={handleAddAuth}
                 disabled={!addAuthForm.numero.trim() || savingAuth}
                 className="w-full h-13 rounded-2xl font-bold text-sm text-white transition-all active:scale-[0.97] disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "#9B8EC4" }}
+                style={{ background: ACCENT }}
               >
                 {savingAuth ? "Guardando…" : <><Check size={16} strokeWidth={2.5} /> Guardar autorización</>}
               </button>
@@ -742,6 +768,91 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Inline-editable property row ──
+function PropRow({
+  icon: Icon,
+  label,
+  value,
+  placeholder,
+  accent,
+  isEditing,
+  onStartEdit,
+  onSave,
+  onCancel,
+  mapsLink,
+  children,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value?: string;
+  placeholder?: string;
+  accent?: boolean;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  mapsLink?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 px-2 py-2.5 rounded-xl transition-colors",
+        isEditing ? "bg-muted/60" : "hover:bg-muted/40 cursor-pointer group"
+      )}
+      onClick={() => !isEditing && onStartEdit()}
+    >
+      <Icon size={15} className={cn("mt-0.5 shrink-0", accent ? "text-primary" : "text-muted-foreground")} />
+      <span className="text-xs text-muted-foreground w-24 shrink-0 pt-0.5">{label}</span>
+      <div className="flex-1 min-w-0">
+        {isEditing ? (
+          <div className="flex flex-col gap-2">
+            {children}
+            <div className="flex gap-1.5">
+              <button
+                onClick={e => { e.stopPropagation(); onSave(); }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all active:scale-95"
+                style={{ background: ACCENT }}
+              >
+                <Check size={12} />Guardar
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); onCancel(); }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-muted-foreground transition-all active:scale-95"
+              >
+                <X size={12} />Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={cn(
+              "text-sm flex-1 min-w-0",
+              accent ? "font-semibold text-primary" :
+              value ? "text-foreground" : "text-muted-foreground italic"
+            )}>
+              {value || placeholder || "—"}
+            </span>
+            {mapsLink && value && (
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 transition-colors hover:opacity-80"
+                style={{ background: "#E8F5E9", color: "#2e7d32" }}
+              >
+                <ExternalLink size={10} />
+              </a>
+            )}
+            <Edit3 size={12} className="opacity-0 group-hover:opacity-30 transition-opacity text-muted-foreground shrink-0" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -763,24 +874,24 @@ function PDFSlot({
 }) {
   if (storagePath) {
     return (
-      <div className="rounded-2xl border-2 p-4 flex items-center gap-3"
+      <div className="rounded-xl border p-3 flex items-center gap-3"
         style={{ borderColor: accentColor + "40", background: accentBg }}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: accentColor + "20" }}>
-          <FileText size={18} color={accentColor} />
+          <FileText size={16} color={accentColor} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold" style={{ color: accentColor }}>{label}</p>
           <p className="text-xs text-muted-foreground">PDF guardado</p>
         </div>
         <button onClick={onView}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
           style={{ background: accentColor, color: "white" }}>
-          <ExternalLink size={12} />Ver PDF
+          <ExternalLink size={10} />Ver
         </button>
         <button onClick={onDelete}
-          className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-black/10 transition-colors ml-1">
-          <Trash2 size={14} className="text-muted-foreground" />
+          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/10 transition-colors">
+          <Trash2 size={12} className="text-muted-foreground" />
         </button>
       </div>
     );
@@ -788,20 +899,20 @@ function PDFSlot({
 
   return (
     <div>
-      <label className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-card px-4 py-3.5 cursor-pointer hover:border-[color:var(--accent)] transition-colors"
+      <label className="flex items-center gap-3 rounded-xl border-2 border-dashed border-border bg-background px-4 py-3 cursor-pointer hover:border-[color:var(--accent)] transition-colors"
         style={{ "--accent": accentColor } as React.CSSProperties}>
         <input type="file" accept=".pdf,application/pdf,image/jpeg,image/png" className="hidden"
           disabled={uploading}
           onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); }} />
         {uploading ? (
           <>
-            <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin shrink-0"
+            <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin shrink-0"
               style={{ borderColor: accentColor + "40", borderTopColor: accentColor }} />
-            <p className="text-sm font-semibold text-muted-foreground">Subiendo...</p>
+            <p className="text-sm text-muted-foreground">Subiendo...</p>
           </>
         ) : (
           <>
-            <Upload size={18} className="text-muted-foreground shrink-0" />
+            <Upload size={15} className="text-muted-foreground shrink-0" />
             <div>
               <p className="text-sm font-semibold text-foreground">Subir {label.toLowerCase()}</p>
               <p className="text-xs text-muted-foreground">PDF, JPG o PNG · máx. 10 MB</p>
