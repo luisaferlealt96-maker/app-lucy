@@ -252,7 +252,8 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
           </motion.div>
         )}
 
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:items-start mt-2">
+          <div className="flex flex-col gap-3 mb-6 lg:mb-0">
 
           {/* Número de autorización — destacado si existe */}
           {auth?.numero_autorizacion ? (
@@ -457,6 +458,50 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
+          {/* Eliminar autorización */}
+          <div>
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
+                style={{ background: "#FFF0F0", color: "#c62828" }}
+              >
+                <Trash2 size={14} strokeWidth={2} />Eliminar autorización
+              </button>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border-2 p-4 flex flex-col gap-3"
+                style={{ borderColor: "#c62828", background: "#FFF0F0" }}
+              >
+                <p className="text-sm font-bold text-center" style={{ color: "#c62828" }}>¿Eliminar esta autorización?</p>
+                <p className="text-xs text-center text-muted-foreground">Se borrará permanentemente y no podrás recuperarla.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 h-10 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleEliminar}
+                    disabled={deleting}
+                    className="flex-1 h-10 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    style={{ background: "#c62828" }}
+                  >
+                    <Trash2 size={13} />
+                    {deleting ? "Eliminando…" : "Sí, eliminar"}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </div>
+          </div>
+
+          {/* ── RIGHT: vinculación + vigencia ── */}
+          <div className="flex flex-col gap-3 mt-4 lg:mt-0">
+
           {/* Vinculada a / paciente (solo lectura) */}
           {((auth?.cita || auth?.examen) || auth?.paciente) && (
             <div className="bg-card rounded-xl border border-border p-4 flex flex-col gap-3">
@@ -506,45 +551,6 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
               </p>
             </div>
           )}
-
-          {/* Eliminar autorización */}
-          <div>
-            {!confirmDelete ? (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
-                style={{ background: "#FFF0F0", color: "#c62828" }}
-              >
-                <Trash2 size={14} strokeWidth={2} />Eliminar autorización
-              </button>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-xl border-2 p-4 flex flex-col gap-3"
-                style={{ borderColor: "#c62828", background: "#FFF0F0" }}
-              >
-                <p className="text-sm font-bold text-center" style={{ color: "#c62828" }}>¿Eliminar esta autorización?</p>
-                <p className="text-xs text-center text-muted-foreground">Se borrará permanentemente y no podrás recuperarla.</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="flex-1 h-10 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleEliminar}
-                    disabled={deleting}
-                    className="flex-1 h-10 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
-                    style={{ background: "#c62828" }}
-                  >
-                    <Trash2 size={13} />
-                    {deleting ? "Eliminando…" : "Sí, eliminar"}
-                  </button>
-                </div>
-              </motion.div>
-            )}
           </div>
         </div>
       </div>

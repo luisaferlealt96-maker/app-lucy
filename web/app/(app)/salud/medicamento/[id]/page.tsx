@@ -324,7 +324,8 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
           </motion.div>
         )}
 
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:items-start mt-2">
+          <div className="flex flex-col gap-3 mb-6 lg:mb-0">
 
           {/* Properties card */}
           <div className="bg-card rounded-xl border border-border p-4">
@@ -631,9 +632,6 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          {/* Seguimiento */}
-          <NotasSeguimiento medicamentoId={id} accentColor={ACCENT} accentBg="#E8F5E9" />
-
           {/* Eliminar medicamento */}
           <div>
             {!confirmDelete ? (
@@ -672,6 +670,12 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                 </div>
               </motion.div>
             )}
+          </div>
+          </div>
+
+          {/* ── RIGHT: seguimiento ── */}
+          <div className="flex flex-col gap-3 mt-4 lg:mt-0">
+            <NotasSeguimiento medicamentoId={id} accentColor={ACCENT} accentBg="#E8F5E9" />
           </div>
         </div>
       </div>

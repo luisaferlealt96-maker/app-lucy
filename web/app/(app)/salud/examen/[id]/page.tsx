@@ -383,7 +383,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
           </motion.div>
         )}
 
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8 lg:items-start mt-2">
+          <div className="flex flex-col gap-3 mb-6 lg:mb-0">
 
           {/* Pendiente por agendar banner */}
           {!examen.fecha_solicitud && (
@@ -643,9 +644,6 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
             </div>
           )}
 
-          {/* Seguimiento */}
-          <NotasSeguimiento examenId={id} accentColor={ACCENT} accentBg="#EDE9F7" />
-
           {/* Eliminar */}
           <div>
             {!confirmDelete ? (
@@ -684,6 +682,12 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                 </div>
               </motion.div>
             )}
+          </div>
+          </div>
+
+          {/* ── RIGHT: seguimiento ── */}
+          <div className="flex flex-col gap-3 mt-4 lg:mt-0">
+            <NotasSeguimiento examenId={id} accentColor={ACCENT} accentBg="#EDE9F7" />
           </div>
         </div>
       </div>
