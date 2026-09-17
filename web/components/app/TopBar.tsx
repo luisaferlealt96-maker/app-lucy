@@ -24,7 +24,7 @@ export function TopBar() {
   const todayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
 
   return (
-    <header className="hidden lg:flex items-center justify-between px-8 h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10 shrink-0">
+    <header className="hidden lg:flex items-center justify-between px-8 h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40 shrink-0">
       <h1 className="text-base font-bold text-foreground">{title}</h1>
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-foreground">{todayCapitalized}</span>
