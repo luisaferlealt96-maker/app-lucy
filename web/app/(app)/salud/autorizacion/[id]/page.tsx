@@ -159,7 +159,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
 
       {/* Sticky top bar */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <button onClick={() => router.back()} className="flex items-center gap-1.5 shrink-0">
             <ArrowLeft size={18} style={{ color: ACCENT }} strokeWidth={2.5} />
             <span className="text-sm font-semibold" style={{ color: ACCENT }}>Autorizaciones</span>
@@ -202,7 +202,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-5xl mx-auto px-4">
         {/* Title block */}
         <div className="pt-5 pb-2">
           <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: ACCENT }}>
