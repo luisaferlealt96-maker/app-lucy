@@ -816,7 +816,7 @@ function KanbanBoardView({
 
         {/* Columns / Calendar */}
         {activeBoard === "citas" && citasView === "calendario" && (
-          <CalendarioView citas={citas} examenes={examenes} medicamentos={medicamentos} nuevaCitaHref={nuevaCitaHref} />
+          <CalendarioView citas={citas} examenes={examenes} medicamentos={medicamentos} onVerPendientes={() => setCitasView("kanban")} />
         )}
         {!(activeBoard === "citas" && citasView === "calendario") && (
         <div className="flex gap-4 overflow-x-auto pb-2 flex-1 min-h-0 items-start" style={{ scrollbarWidth: "thin" }}>
@@ -1054,7 +1054,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="w-[280px] shrink-0 flex flex-col rounded-2xl overflow-hidden max-h-[calc(100dvh-240px)]"
+      className="flex-1 min-w-[280px] max-w-[520px] flex flex-col rounded-2xl overflow-hidden max-h-[calc(100dvh-240px)]"
       style={{
         background: isOver ? bg + "CC" : bg + "55",
         border: isOver ? `2px dashed ${color}66` : "1px solid rgba(0,0,0,0.05)",
@@ -1677,8 +1677,8 @@ function descargarSemanaImagen(weekDays: Date[], eventMap: Map<string, CalEvent[
   link.click();
 }
 
-function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
-  citas: Cita[]; examenes: Examen[]; medicamentos: Medicamento[]; nuevaCitaHref: string;
+function CalendarioView({ citas, examenes, medicamentos, onVerPendientes }: {
+  citas: Cita[]; examenes: Examen[]; medicamentos: Medicamento[]; onVerPendientes: () => void;
 }) {
   const [calView, setCalView] = useState<"semana" | "mes">("semana");
   const [refDate, setRefDate] = useState(() => new Date());
@@ -1833,8 +1833,8 @@ function CalendarioView({ citas, examenes, medicamentos, nuevaCitaHref }: {
           <span className="text-xs font-semibold" style={{ color: "#e65100" }}>
             {sinFecha.length} cita{sinFecha.length !== 1 ? "s" : ""} sin fecha
           </span>
-          <Link href={nuevaCitaHref} className="ml-auto text-xs font-bold underline underline-offset-2"
-            style={{ color: "#e65100" }}>Ver →</Link>
+          <button onClick={onVerPendientes} className="ml-auto text-xs font-bold underline underline-offset-2"
+            style={{ color: "#e65100" }}>Ver →</button>
         </div>
       )}
 
