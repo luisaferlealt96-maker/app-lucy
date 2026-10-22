@@ -125,6 +125,7 @@ function NuevaCitaContent() {
       notas_pre: form.notas_pre || null,
       audio_url,
       estado: tieneFecha ? "pendiente" : "por_agendar",
+      created_by: userId,
     }).select("id").single();
 
     if (inserted?.id && archivoOrden) {
@@ -148,10 +149,12 @@ function NuevaCitaContent() {
       });
     }
 
-    // Notificar por WhatsApp solo cuando tiene fecha, hora y lugar
-    if (inserted?.id && tieneFecha) {
+    // Con fecha: aviso de cita nueva. Sin fecha: aviso de "pendiente por agendar"
+    if (inserted?.id) {
       supabase.functions.invoke("notificar-citas", {
-        body: { tipo: "nueva_cita", cita_id: inserted.id },
+        body: tieneFecha
+          ? { tipo: "nueva_cita", cita_id: inserted.id }
+          : { tipo: "por_agendar", cita_id: inserted.id },
       }).catch(() => {});
     }
 

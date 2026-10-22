@@ -86,6 +86,18 @@ function diasDesde(fechaStr: string): number {
   return Math.floor((Date.now() - from.getTime()) / 86400000);
 }
 
+// Plantilla WA: "Hola {{nombre}}, tienes pendiente por agendar: {{detalle}}. ..."
+// con botón URL dinámico: https://app-lucy-ruby.vercel.app/{{1}}
+const TEMPLATE_POR_AGENDAR = "pendiente_agendar_lucy";
+
+function plural(n: number, singular: string, pluralStr: string) {
+  return `${n} ${n === 1 ? singular : pluralStr}`;
+}
+function listaNatural(partes: string[]) {
+  if (partes.length <= 1) return partes.join("");
+  return `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
+}
+
 type NotifParams = {
   tipo: "recordatorio_wa" | "reporte_cita" | "autorizacion_aprobada" | "autorizacion_por_vencer" | "entrega_vencida";
   titulo: string;
@@ -141,7 +153,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    const { tipo, cita_id, examen_id } = await req.json() as { tipo: string; cita_id?: string; examen_id?: string };
+    const { tipo, cita_id, examen_id, medicamento_id, forzar } = await req.json() as {
+      tipo: string; cita_id?: string; examen_id?: string; medicamento_id?: string; forzar?: boolean;
+    };
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE);
 
     // ── CRON: recordatorio automático 24h antes de citas ────────────────
@@ -729,9 +743,137 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, tipo, entregasNotificadas: enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ── AL CREAR SIN FECHA: aviso inmediato de "pendiente por agendar" ──
+    if (tipo === "por_agendar") {
+      const json = (obj: unknown, status = 200) =>
+        new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
+      let detalle = "";
+      let path = "salud";
+      let createdBy: string | null = null;
+      let acomp: { nombre: string; telefono: string | null } | null = null;
+
+      if (cita_id) {
+        const { data: c } = await sb.from("citas")
+          .select("*, acompanante:acompanante_id(nombre, telefono)")
+          .eq("id", cita_id).single();
+        if (!c || c.estado !== "por_agendar") return json({ ok: true, tipo, enviados: 0 });
+        detalle = `la cita de ${c.nombre ?? c.especialidad ?? "consulta médica"}`;
+        path = `salud/cita/${cita_id}`;
+        createdBy = c.created_by ?? null;
+        acomp = c.acompanante ?? null;
+      } else if (examen_id) {
+        const { data: e } = await sb.from("examenes")
+          .select("*, acompanante:acompanante_id(nombre, telefono)")
+          .eq("id", examen_id).single();
+        if (!e || e.fecha_solicitud || e.estado === "listo") return json({ ok: true, tipo, enviados: 0 });
+        detalle = `el procedimiento ${e.nombre}`;
+        path = `salud/examen/${examen_id}`;
+        createdBy = e.created_by ?? null;
+        acomp = e.acompanante ?? null;
+      } else if (medicamento_id) {
+        const { data: m } = await sb.from("medicamentos")
+          .select("nombre, entregas_medicamento(estado, fecha_programada)")
+          .eq("id", medicamento_id).single();
+        const entregas = (m?.entregas_medicamento ?? []) as { estado: string; fecha_programada: string | null }[];
+        if (!m || !entregas.some(en => en.estado === "pendiente" && !en.fecha_programada)) {
+          return json({ ok: true, tipo, enviados: 0 });
+        }
+        detalle = `la entrega del medicamento ${m.nombre}`;
+        path = `salud/medicamento/${medicamento_id}`;
+      } else {
+        return json({ error: "falta cita_id, examen_id o medicamento_id" }, 400);
+      }
+
+      // Receptores: admins + quien lo creó + la persona asignada (sin repetir teléfonos)
+      const receptores = await getRecipientes(sb, createdBy);
+      if (acomp?.telefono) receptores.push({ nombre: acomp.nombre, telefono: acomp.telefono });
+
+      const vistos = new Set<string>();
+      let enviados = 0;
+      for (const m of receptores) {
+        const tel = m.telefono.replace(/\D/g, "");
+        if (vistos.has(tel)) continue;
+        vistos.add(tel);
+        const ok = await enviarWA(m.telefono, TEMPLATE_POR_AGENDAR, [
+          { name: "nombre",  value: m.nombre },
+          { name: "detalle", value: detalle },
+        ], path);
+        if (ok) enviados++;
+      }
+      return json({ ok: true, tipo, enviados });
+    }
+
+    // ── CRON SEMANAL (lunes): resumen de todo lo que sigue sin agendar ──
+    if (tipo === "recordatorio_por_agendar") {
+      const OFFSET_MS = 5 * 60 * 60 * 1000;
+      const ahoraBogota = new Date(Date.now() - OFFSET_MS);
+      if (!forzar && ahoraBogota.getUTCDay() !== 1) {
+        return new Response(JSON.stringify({ ok: true, tipo, omitido: "solo se envía los lunes" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+
+      // Solo lo creado hace más de 2 días (lo más nuevo ya recibió su aviso al crearse)
+      const hace2d = new Date(Date.now() - 2 * 86400000).toISOString();
+      const [{ data: citas }, { data: examenes }, { data: meds }, { data: miembros }] = await Promise.all([
+        sb.from("citas").select("acompanante_id").eq("estado", "por_agendar").lt("created_at", hace2d),
+        sb.from("examenes").select("acompanante_id").is("fecha_solicitud", null).neq("estado", "listo").lt("created_at", hace2d),
+        sb.from("medicamentos").select("id, entregas_medicamento(estado, fecha_programada)").eq("activo", true).lt("created_at", hace2d),
+        sb.from("miembros_familia").select("id, nombre, telefono, rol").eq("activo", true).not("telefono", "is", null),
+      ]);
+
+      type Miembro = { id: string; nombre: string; telefono: string; rol: string };
+      type Conteo = { citas: number; examenes: number; meds: number };
+      const miembrosList = (miembros ?? []) as Miembro[];
+      const porMiembro = new Map<string, Conteo>();
+      const conteoDe = (id: string) => {
+        if (!porMiembro.has(id)) porMiembro.set(id, { citas: 0, examenes: 0, meds: 0 });
+        return porMiembro.get(id)!;
+      };
+
+      const citasPend = (citas ?? []) as { acompanante_id: string | null }[];
+      const examPend  = (examenes ?? []) as { acompanante_id: string | null }[];
+      const medsPend  = ((meds ?? []) as { entregas_medicamento: { estado: string; fecha_programada: string | null }[] }[])
+        .filter(m => (m.entregas_medicamento ?? []).some(en => en.estado === "pendiente" && !en.fecha_programada));
+
+      // Los admins ven todo (incluye medicamentos, que no tienen persona asignada)
+      for (const a of miembrosList.filter(m => m.rol === "admin")) {
+        const c = conteoDe(a.id);
+        c.citas = citasPend.length;
+        c.examenes = examPend.length;
+        c.meds = medsPend.length;
+      }
+      // El resto solo ve lo que tiene asignado
+      for (const x of citasPend) {
+        const m = miembrosList.find(mm => mm.id === x.acompanante_id);
+        if (m && m.rol !== "admin" && m.rol !== "abuela") conteoDe(m.id).citas++;
+      }
+      for (const x of examPend) {
+        const m = miembrosList.find(mm => mm.id === x.acompanante_id);
+        if (m && m.rol !== "admin" && m.rol !== "abuela") conteoDe(m.id).examenes++;
+      }
+
+      let enviados = 0;
+      for (const [id, c] of porMiembro) {
+        if (c.citas + c.examenes + c.meds === 0) continue;
+        const m = miembrosList.find(mm => mm.id === id);
+        if (!m) continue;
+        const partes: string[] = [];
+        if (c.citas)     partes.push(plural(c.citas, "cita", "citas"));
+        if (c.examenes)  partes.push(plural(c.examenes, "procedimiento", "procedimientos"));
+        if (c.meds)      partes.push(plural(c.meds, "medicamento", "medicamentos"));
+        const ok = await enviarWA(m.telefono, TEMPLATE_POR_AGENDAR, [
+          { name: "nombre",  value: m.nombre },
+          { name: "detalle", value: listaNatural(partes) },
+        ], "salud");
+        if (ok) enviados++;
+      }
+
+      return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ── CRON UNIFICADO: ejecuta todos los tipos en secuencia ────────────
     if (tipo === "todos") {
-      const tipos = ["recordatorio", "autorizaciones", "resultados", "reporte_post_cita", "recordatorio_entrega"];
+      const tipos = ["recordatorio", "autorizaciones", "resultados", "reporte_post_cita", "recordatorio_entrega", "recordatorio_por_agendar"];
       const resultados: Record<string, unknown> = {};
       for (const t of tipos) {
         try {

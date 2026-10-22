@@ -107,6 +107,13 @@ function NuevoMedicamentoContent() {
         estado: "pendiente" as const,
       }));
       await supabase.from("entregas_medicamento").insert(entregas);
+
+      // Si alguna entrega quedó sin fecha, avisar que está pendiente por agendar
+      if (fechasEntregas.some(f => !f)) {
+        supabase.functions.invoke("notificar-citas", {
+          body: { tipo: "por_agendar", medicamento_id: med.id },
+        }).catch(() => {});
+      }
     }
 
     if (med?.id && archivoFormula) {

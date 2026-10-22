@@ -137,10 +137,14 @@ function NuevoExamenContent() {
       });
     }
 
-    // Notificar por WhatsApp si tiene fecha, hora y lugar
+    // Con fecha, hora y lugar: aviso de procedimiento nuevo. Sin fecha: aviso de "pendiente por agendar"
     if (inserted?.id && tieneFecha && form.lugar && form.hora) {
       supabase.functions.invoke("notificar-citas", {
         body: { tipo: "nueva_cita", examen_id: inserted.id },
+      }).catch(() => {});
+    } else if (inserted?.id && !tieneFecha) {
+      supabase.functions.invoke("notificar-citas", {
+        body: { tipo: "por_agendar", examen_id: inserted.id },
       }).catch(() => {});
     }
 
