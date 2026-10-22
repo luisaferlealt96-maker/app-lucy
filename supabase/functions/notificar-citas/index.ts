@@ -13,7 +13,7 @@ const cors = {
 
 type Param = { name: string; value: string };
 
-async function enviarWA(telefono: string, template: string, params: Param[], lugarUrl?: string) {
+async function enviarWA(telefono: string, template: string, params: Param[], lugarUrl?: string, idioma = "es_CO") {
   const cleaned = telefono.replace(/\s/g, "").replace(/^\+/, "");
   const components: object[] = [{
     type: "body",
@@ -31,7 +31,7 @@ async function enviarWA(telefono: string, template: string, params: Param[], lug
     messaging_product: "whatsapp",
     to: cleaned,
     type: "template",
-    template: { name: template, language: { code: "es_CO" }, components },
+    template: { name: template, language: { code: idioma }, components },
   };
   const res = await fetch(
     `https://graph.facebook.com/v18.0/${WHATSAPP_PHONE_ID}/messages`,
@@ -89,6 +89,7 @@ function diasDesde(fechaStr: string): number {
 // Plantilla WA: "Hola {{nombre}}, tienes pendiente por agendar: {{detalle}}. ..."
 // con botón URL dinámico: https://app-lucy-ruby.vercel.app/{{1}}
 const TEMPLATE_POR_AGENDAR = "pendiente_agendar_lucy";
+const IDIOMA_POR_AGENDAR = "es"; // la plantilla se creó en "Español" (es), no "Español (Colombia)"
 
 const SIN_PRESTADOR = "Aún no hay prestador registrado.";
 
@@ -832,7 +833,7 @@ serve(async (req) => {
           { name: "nombre",   value: m.nombre },
           { name: "detalle",  value: detalle },
           { name: "contacto", value: contacto },
-        ], path);
+        ], path, IDIOMA_POR_AGENDAR);
         if (ok) enviados++;
       }
       return json({ ok: true, tipo, enviados });
@@ -930,7 +931,7 @@ serve(async (req) => {
           { name: "nombre",   value: m.nombre },
           { name: "detalle",  value: listaNatural(partes) },
           { name: "contacto", value: contacto },
-        ], "salud");
+        ], "salud", IDIOMA_POR_AGENDAR);
         if (ok) enviados++;
       }
 
