@@ -90,6 +90,22 @@ function diasDesde(fechaStr: string): number {
 // con botón URL dinámico: https://app-lucy-ruby.vercel.app/{{1}}
 const TEMPLATE_POR_AGENDAR = "pendiente_agendar_lucy";
 
+const SIN_PRESTADOR = "Aún no hay prestador registrado.";
+
+// Los valores de variables de plantilla no admiten saltos de línea ni espacios repetidos
+function limpiar(s: string, max: number) {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+function textoPrestador(p?: { nombre_prestador: string | null; telefono_prestador: string | null } | null): string | null {
+  if (!p) return null;
+  const partes = [
+    p.nombre_prestador ? limpiar(p.nombre_prestador, 50) : null,
+    p.telefono_prestador ? `tel. ${limpiar(p.telefono_prestador, 20)}` : null,
+  ].filter(Boolean);
+  return partes.length ? partes.join(", ") : null;
+}
+
 function plural(n: number, singular: string, pluralStr: string) {
   return `${n} ${n === 1 ? singular : pluralStr}`;
 }
@@ -785,6 +801,18 @@ serve(async (req) => {
         return json({ error: "falta cita_id, examen_id o medicamento_id" }, 400);
       }
 
+      // Prestador al que se puede llamar para agendar (de la autorización aprobada vinculada)
+      let contacto = SIN_PRESTADOR;
+      if (cita_id || examen_id) {
+        const { data: auths } = await sb.from("autorizaciones_eps")
+          .select("nombre_prestador, telefono_prestador")
+          .eq(cita_id ? "cita_id" : "examen_id", (cita_id ?? examen_id) as string)
+          .eq("estado", "autorizada");
+        const prest = ((auths ?? []) as { nombre_prestador: string | null; telefono_prestador: string | null }[])
+          .map(textoPrestador).find(Boolean);
+        if (prest) contacto = `Para agendar: ${prest}.`;
+      }
+
       // Receptores: admins + quien lo creó + la persona asignada (sin repetir teléfonos)
       const receptores = await getRecipientes(sb, createdBy);
       if (acomp?.telefono) receptores.push({ nombre: acomp.nombre, telefono: acomp.telefono });
@@ -796,8 +824,9 @@ serve(async (req) => {
         if (vistos.has(tel)) continue;
         vistos.add(tel);
         const ok = await enviarWA(m.telefono, TEMPLATE_POR_AGENDAR, [
-          { name: "nombre",  value: m.nombre },
-          { name: "detalle", value: detalle },
+          { name: "nombre",   value: m.nombre },
+          { name: "detalle",  value: detalle },
+          { name: "contacto", value: contacto },
         ], path);
         if (ok) enviados++;
       }
@@ -814,42 +843,62 @@ serve(async (req) => {
 
       // Solo lo creado hace más de 2 días (lo más nuevo ya recibió su aviso al crearse)
       const hace2d = new Date(Date.now() - 2 * 86400000).toISOString();
-      const [{ data: citas }, { data: examenes }, { data: meds }, { data: miembros }] = await Promise.all([
-        sb.from("citas").select("acompanante_id").eq("estado", "por_agendar").lt("created_at", hace2d),
-        sb.from("examenes").select("acompanante_id").is("fecha_solicitud", null).neq("estado", "listo").lt("created_at", hace2d),
+      const [{ data: citas }, { data: examenes }, { data: meds }, { data: miembros }, { data: auths }] = await Promise.all([
+        sb.from("citas").select("id, nombre, especialidad, acompanante_id").eq("estado", "por_agendar").lt("created_at", hace2d),
+        sb.from("examenes").select("id, nombre, acompanante_id").is("fecha_solicitud", null).neq("estado", "listo").lt("created_at", hace2d),
         sb.from("medicamentos").select("id, entregas_medicamento(estado, fecha_programada)").eq("activo", true).lt("created_at", hace2d),
         sb.from("miembros_familia").select("id, nombre, telefono, rol").eq("activo", true).not("telefono", "is", null),
+        sb.from("autorizaciones_eps").select("cita_id, examen_id, nombre_prestador, telefono_prestador").eq("estado", "autorizada"),
       ]);
 
       type Miembro = { id: string; nombre: string; telefono: string; rol: string };
-      type Conteo = { citas: number; examenes: number; meds: number };
+      type Item = { label: string; prestador: string | null };
+      type Acum = { citas: number; examenes: number; meds: number; items: Item[] };
       const miembrosList = (miembros ?? []) as Miembro[];
-      const porMiembro = new Map<string, Conteo>();
-      const conteoDe = (id: string) => {
-        if (!porMiembro.has(id)) porMiembro.set(id, { citas: 0, examenes: 0, meds: 0 });
+      const porMiembro = new Map<string, Acum>();
+      const acumDe = (id: string) => {
+        if (!porMiembro.has(id)) porMiembro.set(id, { citas: 0, examenes: 0, meds: 0, items: [] });
         return porMiembro.get(id)!;
       };
 
-      const citasPend = (citas ?? []) as { acompanante_id: string | null }[];
-      const examPend  = (examenes ?? []) as { acompanante_id: string | null }[];
+      // Prestador (nombre + teléfono) de la autorización aprobada de cada cita/procedimiento
+      const prestadorDe = new Map<string, string>();
+      for (const a of (auths ?? []) as { cita_id: string | null; examen_id: string | null; nombre_prestador: string | null; telefono_prestador: string | null }[]) {
+        const txt = textoPrestador(a);
+        const key = a.cita_id ?? a.examen_id;
+        if (txt && key && !prestadorDe.has(key)) prestadorDe.set(key, txt);
+      }
+
+      type CitaP = { id: string; nombre: string | null; especialidad: string | null; acompanante_id: string | null };
+      type ExamP = { id: string; nombre: string; acompanante_id: string | null };
+      const citasPend = (citas ?? []) as CitaP[];
+      const examPend  = (examenes ?? []) as ExamP[];
       const medsPend  = ((meds ?? []) as { entregas_medicamento: { estado: string; fecha_programada: string | null }[] }[])
         .filter(m => (m.entregas_medicamento ?? []).some(en => en.estado === "pendiente" && !en.fecha_programada));
 
+      const itemsCitas: (Item & { acompId: string | null })[] = citasPend.map(c => ({
+        label: limpiar(c.nombre ?? c.especialidad ?? "Cita", 30), prestador: prestadorDe.get(c.id) ?? null, acompId: c.acompanante_id,
+      }));
+      const itemsExam: (Item & { acompId: string | null })[] = examPend.map(e => ({
+        label: limpiar(e.nombre, 30), prestador: prestadorDe.get(e.id) ?? null, acompId: e.acompanante_id,
+      }));
+
       // Los admins ven todo (incluye medicamentos, que no tienen persona asignada)
       for (const a of miembrosList.filter(m => m.rol === "admin")) {
-        const c = conteoDe(a.id);
+        const c = acumDe(a.id);
         c.citas = citasPend.length;
         c.examenes = examPend.length;
         c.meds = medsPend.length;
+        c.items = [...itemsCitas, ...itemsExam];
       }
       // El resto solo ve lo que tiene asignado
-      for (const x of citasPend) {
-        const m = miembrosList.find(mm => mm.id === x.acompanante_id);
-        if (m && m.rol !== "admin" && m.rol !== "abuela") conteoDe(m.id).citas++;
+      for (const it of itemsCitas) {
+        const m = miembrosList.find(mm => mm.id === it.acompId);
+        if (m && m.rol !== "admin" && m.rol !== "abuela") { const c = acumDe(m.id); c.citas++; c.items.push(it); }
       }
-      for (const x of examPend) {
-        const m = miembrosList.find(mm => mm.id === x.acompanante_id);
-        if (m && m.rol !== "admin" && m.rol !== "abuela") conteoDe(m.id).examenes++;
+      for (const it of itemsExam) {
+        const m = miembrosList.find(mm => mm.id === it.acompId);
+        if (m && m.rol !== "admin" && m.rol !== "abuela") { const c = acumDe(m.id); c.examenes++; c.items.push(it); }
       }
 
       let enviados = 0;
@@ -861,9 +910,20 @@ serve(async (req) => {
         if (c.citas)     partes.push(plural(c.citas, "cita", "citas"));
         if (c.examenes)  partes.push(plural(c.examenes, "procedimiento", "procedimientos"));
         if (c.meds)      partes.push(plural(c.meds, "medicamento", "medicamentos"));
+
+        // Hasta 4 pendientes que ya tienen prestador al cual llamar
+        const conPrestador = c.items.filter(i => i.prestador);
+        let contacto = SIN_PRESTADOR;
+        if (conPrestador.length) {
+          const lista = conPrestador.slice(0, 4).map(i => `${i.label} (${i.prestador})`).join("; ");
+          const resto = conPrestador.length - 4;
+          contacto = `Para agendar: ${lista}${resto > 0 ? ` y ${resto} más en la app` : ""}.`;
+        }
+
         const ok = await enviarWA(m.telefono, TEMPLATE_POR_AGENDAR, [
-          { name: "nombre",  value: m.nombre },
-          { name: "detalle", value: listaNatural(partes) },
+          { name: "nombre",   value: m.nombre },
+          { name: "detalle",  value: listaNatural(partes) },
+          { name: "contacto", value: contacto },
         ], "salud");
         if (ok) enviados++;
       }
