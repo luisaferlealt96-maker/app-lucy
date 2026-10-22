@@ -40,6 +40,8 @@ export interface Cita {
   audio_url: string | null;
   audio_post_url: string | null;
   lugar_detalle: string | null;
+  nombre_prestador: string | null;
+  telefono_prestador: string | null;
   archivo_url: string | null;
   created_by: string | null;
   created_at: string;
@@ -82,6 +84,8 @@ export interface Examen {
   id: string;
   paciente_id: string;
   acompanante_id: string | null;
+  nombre_prestador: string | null;
+  telefono_prestador: string | null;
   tipo: TipoExamen;
   nombre: string;
   especialidad: string | null;

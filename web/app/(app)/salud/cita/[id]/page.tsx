@@ -69,7 +69,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
   const [savingAuth, setSavingAuth] = useState(false);
   const [editForm, setEditForm] = useState({
     nombre: "", especialidad: "", medico: "",
-    fecha: "", hora: "", lugar: "", lugar_detalle: "", acompanante_id: "",
+    fecha: "", hora: "", lugar: "", lugar_detalle: "", acompanante_id: "", nombre_prestador: "", telefono_prestador: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savedEdit, setSavedEdit] = useState(false);
@@ -117,6 +117,8 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
         hora: fh ? fh.toTimeString().slice(0, 5) : "",
         lugar: data.lugar ?? "",
         lugar_detalle: data.lugar_detalle ?? "",
+        nombre_prestador: data.nombre_prestador ?? "",
+        telefono_prestador: data.telefono_prestador ?? "",
         acompanante_id: data.acompanante_id ?? "",
       });
     }
@@ -253,6 +255,8 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
       medico: editForm.medico.trim() || null,
       lugar: editForm.lugar.trim() || null,
       lugar_detalle: editForm.lugar_detalle.trim() || null,
+      nombre_prestador: editForm.nombre_prestador.trim() || null,
+      telefono_prestador: editForm.telefono_prestador.trim() || null,
       fecha_hora: tieneFechaCompleta
         ? new Date(`${editForm.fecha}T${editForm.hora}`).toISOString()
         : null,
@@ -597,6 +601,37 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                       onChange={e => setEditForm(f => ({ ...f, lugar_detalle: e.target.value }))}
                       placeholder="Consultorio, piso, torre… (opcional)"
                       className="h-8 rounded-lg text-xs"
+                    />
+                  </div>
+                </PropRow>
+
+                {/* Prestador (con quién se agenda) */}
+                <PropRow
+                  icon={Building2}
+                  label="Prestador"
+                  value={[cita?.nombre_prestador, cita?.telefono_prestador ? `tel. ${cita.telefono_prestador}` : null].filter(Boolean).join(" · ") || undefined}
+                  placeholder="Sin prestador"
+                  isEditing={editingField === "prestador"}
+                  onStartEdit={() => setEditingField("prestador")}
+                  onSave={() => handleGuardarEdicion("prestador")}
+                  onCancel={() => setEditingField(null)}
+                >
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <Input
+                      autoFocus
+                      value={editForm.nombre_prestador}
+                      onChange={e => setEditForm(f => ({ ...f, nombre_prestador: e.target.value }))}
+                      placeholder="Ej: Clínica Cafam, Centro Médico Dávila"
+                      className="h-9 rounded-lg"
+                      onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("prestador"); }}
+                    />
+                    <Input
+                      type="tel"
+                      value={editForm.telefono_prestador}
+                      onChange={e => setEditForm(f => ({ ...f, telefono_prestador: e.target.value }))}
+                      placeholder="Teléfono para agendar"
+                      className="h-9 rounded-lg"
+                      onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("prestador"); }}
                     />
                   </div>
                 </PropRow>

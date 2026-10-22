@@ -59,6 +59,8 @@ function NuevoExamenContent() {
     tipo: "examen" as "laboratorio" | "examen" | "procedimiento",
     especialidad: "",
     lugar: "",
+    nombre_prestador: "",
+    telefono_prestador: "",
     fecha_solicitud: "",
     hora: "",
     acompanante_id: "",
@@ -106,6 +108,8 @@ function NuevoExamenContent() {
       tipo: form.tipo,
       especialidad: form.especialidad || null,
       lugar: form.lugar || null,
+      nombre_prestador: form.nombre_prestador.trim() || null,
+      telefono_prestador: form.telefono_prestador.trim() || null,
       fecha_solicitud: tieneFecha ? form.fecha_solicitud : null,
       hora: tieneFecha && form.hora ? form.hora : null,
       acompanante_id: form.acompanante_id || null,
@@ -298,6 +302,24 @@ function NuevoExamenContent() {
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+
+        {/* Prestador: con quién se agenda (visible con o sin fecha) */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-foreground uppercase tracking-wide">¿Con quién se agenda? (opcional)</label>
+          <Input
+            placeholder="Prestador: Ej: Laboratorio Cafam"
+            value={form.nombre_prestador}
+            onChange={e => set("nombre_prestador", e.target.value)}
+            className="rounded-xl border-border bg-card h-12"
+          />
+          <Input
+            type="tel"
+            placeholder="Teléfono para agendar"
+            value={form.telefono_prestador}
+            onChange={e => set("telefono_prestador", e.target.value)}
+            className="rounded-xl border-border bg-card h-11 text-sm"
+          />
         </div>
 
         {/* Fecha + Ubicación (solo si tiene fecha programada) */}

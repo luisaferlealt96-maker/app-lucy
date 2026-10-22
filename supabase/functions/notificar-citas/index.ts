@@ -768,6 +768,7 @@ serve(async (req) => {
       let path = "salud";
       let createdBy: string | null = null;
       let acomp: { nombre: string; telefono: string | null } | null = null;
+      let prestadorPropio: string | null = null;
 
       if (cita_id) {
         const { data: c } = await sb.from("citas")
@@ -778,6 +779,7 @@ serve(async (req) => {
         path = `salud/cita/${cita_id}`;
         createdBy = c.created_by ?? null;
         acomp = c.acompanante ?? null;
+        prestadorPropio = textoPrestador(c);
       } else if (examen_id) {
         const { data: e } = await sb.from("examenes")
           .select("*, acompanante:acompanante_id(nombre, telefono)")
@@ -787,6 +789,7 @@ serve(async (req) => {
         path = `salud/examen/${examen_id}`;
         createdBy = e.created_by ?? null;
         acomp = e.acompanante ?? null;
+        prestadorPropio = textoPrestador(e);
       } else if (medicamento_id) {
         const { data: m } = await sb.from("medicamentos")
           .select("nombre, entregas_medicamento(estado, fecha_programada)")
@@ -802,16 +805,18 @@ serve(async (req) => {
       }
 
       // Prestador al que se puede llamar para agendar (de la autorización aprobada vinculada)
+      // 1) el que se registró en la propia cita/procedimiento; 2) respaldo: el de la autorización aprobada
       let contacto = SIN_PRESTADOR;
-      if (cita_id || examen_id) {
+      let prest = prestadorPropio;
+      if (!prest && (cita_id || examen_id)) {
         const { data: auths } = await sb.from("autorizaciones_eps")
           .select("nombre_prestador, telefono_prestador")
           .eq(cita_id ? "cita_id" : "examen_id", (cita_id ?? examen_id) as string)
           .eq("estado", "autorizada");
-        const prest = ((auths ?? []) as { nombre_prestador: string | null; telefono_prestador: string | null }[])
-          .map(textoPrestador).find(Boolean);
-        if (prest) contacto = `Para agendar: ${prest}.`;
+        prest = ((auths ?? []) as { nombre_prestador: string | null; telefono_prestador: string | null }[])
+          .map(textoPrestador).find(Boolean) ?? null;
       }
+      if (prest) contacto = `Para agendar: ${prest}.`;
 
       // Receptores: admins + quien lo creó + la persona asignada (sin repetir teléfonos)
       const receptores = await getRecipientes(sb, createdBy);
@@ -844,8 +849,8 @@ serve(async (req) => {
       // Solo lo creado hace más de 2 días (lo más nuevo ya recibió su aviso al crearse)
       const hace2d = new Date(Date.now() - 2 * 86400000).toISOString();
       const [{ data: citas }, { data: examenes }, { data: meds }, { data: miembros }, { data: auths }] = await Promise.all([
-        sb.from("citas").select("id, nombre, especialidad, acompanante_id").eq("estado", "por_agendar").lt("created_at", hace2d),
-        sb.from("examenes").select("id, nombre, acompanante_id").is("fecha_solicitud", null).neq("estado", "listo").lt("created_at", hace2d),
+        sb.from("citas").select("id, nombre, especialidad, acompanante_id, nombre_prestador, telefono_prestador").eq("estado", "por_agendar").lt("created_at", hace2d),
+        sb.from("examenes").select("id, nombre, acompanante_id, nombre_prestador, telefono_prestador").is("fecha_solicitud", null).neq("estado", "listo").lt("created_at", hace2d),
         sb.from("medicamentos").select("id, entregas_medicamento(estado, fecha_programada)").eq("activo", true).lt("created_at", hace2d),
         sb.from("miembros_familia").select("id, nombre, telefono, rol").eq("activo", true).not("telefono", "is", null),
         sb.from("autorizaciones_eps").select("cita_id, examen_id, nombre_prestador, telefono_prestador").eq("estado", "autorizada"),
@@ -869,18 +874,19 @@ serve(async (req) => {
         if (txt && key && !prestadorDe.has(key)) prestadorDe.set(key, txt);
       }
 
-      type CitaP = { id: string; nombre: string | null; especialidad: string | null; acompanante_id: string | null };
-      type ExamP = { id: string; nombre: string; acompanante_id: string | null };
+      type PrestP = { nombre_prestador: string | null; telefono_prestador: string | null };
+      type CitaP = PrestP & { id: string; nombre: string | null; especialidad: string | null; acompanante_id: string | null };
+      type ExamP = PrestP & { id: string; nombre: string; acompanante_id: string | null };
       const citasPend = (citas ?? []) as CitaP[];
       const examPend  = (examenes ?? []) as ExamP[];
       const medsPend  = ((meds ?? []) as { entregas_medicamento: { estado: string; fecha_programada: string | null }[] }[])
         .filter(m => (m.entregas_medicamento ?? []).some(en => en.estado === "pendiente" && !en.fecha_programada));
 
       const itemsCitas: (Item & { acompId: string | null })[] = citasPend.map(c => ({
-        label: limpiar(c.nombre ?? c.especialidad ?? "Cita", 30), prestador: prestadorDe.get(c.id) ?? null, acompId: c.acompanante_id,
+        label: limpiar(c.nombre ?? c.especialidad ?? "Cita", 30), prestador: textoPrestador(c) ?? prestadorDe.get(c.id) ?? null, acompId: c.acompanante_id,
       }));
       const itemsExam: (Item & { acompId: string | null })[] = examPend.map(e => ({
-        label: limpiar(e.nombre, 30), prestador: prestadorDe.get(e.id) ?? null, acompId: e.acompanante_id,
+        label: limpiar(e.nombre, 30), prestador: textoPrestador(e) ?? prestadorDe.get(e.id) ?? null, acompId: e.acompanante_id,
       }));
 
       // Los admins ven todo (incluye medicamentos, que no tienen persona asignada)

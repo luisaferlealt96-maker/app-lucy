@@ -62,6 +62,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     hora: string;
     lugar: string;
     acompanante_id: string | null;
+    nombre_prestador: string;
+    telefono_prestador: string;
     notas: string;
   }>({
     nombre: "",
@@ -71,6 +73,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     hora: "",
     lugar: "",
     acompanante_id: null,
+    nombre_prestador: "",
+    telefono_prestador: "",
     notas: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
@@ -97,6 +101,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
         hora: data.hora ? data.hora.slice(0, 5) : "",
         lugar: data.lugar ?? "",
         acompanante_id: data.acompanante_id ?? "",
+        nombre_prestador: data.nombre_prestador ?? "",
+        telefono_prestador: data.telefono_prestador ?? "",
         notas: data.notas ?? "",
       });
     }
@@ -187,6 +193,8 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
       hora: editForm.hora || null,
       lugar: editForm.lugar.trim() || null,
       acompanante_id: editForm.acompanante_id || null,
+      nombre_prestador: editForm.nombre_prestador.trim() || null,
+      telefono_prestador: editForm.telefono_prestador.trim() || null,
       notas: editForm.notas.trim() || null,
     }).eq("id", id);
     setSavingEdit(false);
@@ -502,6 +510,37 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                   className="h-9 rounded-lg flex-1"
                   onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("lugar"); }}
                 />
+              </PropRow>
+
+              {/* Prestador (con quién se agenda) */}
+              <PropRow
+                icon={Building2}
+                label="Prestador"
+                value={[examen.nombre_prestador, examen.telefono_prestador ? `tel. ${examen.telefono_prestador}` : null].filter(Boolean).join(" · ") || undefined}
+                placeholder="Sin prestador"
+                isEditing={editingField === "prestador"}
+                onStartEdit={() => setEditingField("prestador")}
+                onSave={() => handleGuardarEdicion("prestador")}
+                onCancel={() => setEditingField(null)}
+              >
+                <div className="flex flex-col gap-1.5 w-full">
+                  <Input
+                    autoFocus
+                    value={editForm.nombre_prestador}
+                    onChange={e => setEditForm(f => ({ ...f, nombre_prestador: e.target.value }))}
+                    placeholder="Ej: Laboratorio Cafam, Clínica del Country"
+                    className="h-9 rounded-lg"
+                    onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("prestador"); }}
+                  />
+                  <Input
+                    type="tel"
+                    value={editForm.telefono_prestador}
+                    onChange={e => setEditForm(f => ({ ...f, telefono_prestador: e.target.value }))}
+                    placeholder="Teléfono para agendar"
+                    className="h-9 rounded-lg"
+                    onKeyDown={e => { if (e.key === "Enter") handleGuardarEdicion("prestador"); }}
+                  />
+                </div>
               </PropRow>
 
               {/* Acompañante */}

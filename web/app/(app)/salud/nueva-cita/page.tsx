@@ -56,6 +56,8 @@ function NuevaCitaContent() {
     medico: "",
     lugar: "",
     lugar_detalle: "",
+    nombre_prestador: "",
+    telefono_prestador: "",
     fecha: "",
     hora: "",
     notas_pre: "",
@@ -121,6 +123,8 @@ function NuevaCitaContent() {
       medico: form.medico || null,
       lugar: tieneFecha ? (form.lugar || null) : null,
       lugar_detalle: tieneFecha ? (form.lugar_detalle || null) : null,
+      nombre_prestador: form.nombre_prestador.trim() || null,
+      telefono_prestador: form.telefono_prestador.trim() || null,
       fecha_hora: tieneFecha ? new Date(`${form.fecha}T${form.hora}`).toISOString() : null,
       notas_pre: form.notas_pre || null,
       audio_url,
@@ -296,6 +300,24 @@ function NuevaCitaContent() {
             value={form.medico}
             onChange={e => set("medico", e.target.value)}
             className="rounded-xl border-border bg-card h-12"
+          />
+        </div>
+
+        {/* Prestador: con quién se agenda (visible con o sin fecha) */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-foreground uppercase tracking-wide">¿Con quién se agenda? (opcional)</label>
+          <Input
+            placeholder="Prestador: Ej: Clínica Cafam"
+            value={form.nombre_prestador}
+            onChange={e => set("nombre_prestador", e.target.value)}
+            className="rounded-xl border-border bg-card h-12"
+          />
+          <Input
+            type="tel"
+            placeholder="Teléfono para agendar"
+            value={form.telefono_prestador}
+            onChange={e => set("telefono_prestador", e.target.value)}
+            className="rounded-xl border-border bg-card h-11 text-sm"
           />
         </div>
 
