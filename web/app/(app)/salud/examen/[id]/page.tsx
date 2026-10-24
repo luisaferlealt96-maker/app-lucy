@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, FileText, Upload, Trash2,
   MapPin, Calendar, Check, ExternalLink, Clock, X, Shield, User, Bell,
-  Building2, Phone, Edit3, ChevronDown,
+  Building2, Phone, Edit3, ChevronDown, CalendarClock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { crearNotificacion } from "@/lib/supabase/notificaciones";
 import { uploadDocumentoMedico, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
+import { estadoLimite } from "@/lib/utils/limite";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Examen, AutorizacionEPS, MiembroFamilia } from "@/lib/supabase/types";
 import { useMiembros } from "@/hooks/useSalud";
@@ -65,6 +66,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     nombre_prestador: string;
     telefono_prestador: string;
     notas: string;
+    fecha_limite: string;
   }>({
     nombre: "",
     tipo: "examen",
@@ -76,6 +78,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     nombre_prestador: "",
     telefono_prestador: "",
     notas: "",
+    fecha_limite: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savedEdit, setSavedEdit] = useState(false);
@@ -104,6 +107,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
         nombre_prestador: data.nombre_prestador ?? "",
         telefono_prestador: data.telefono_prestador ?? "",
         notas: data.notas ?? "",
+        fecha_limite: data.fecha_limite ?? "",
       });
     }
     setLoading(false);
@@ -196,6 +200,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
       nombre_prestador: editForm.nombre_prestador.trim() || null,
       telefono_prestador: editForm.telefono_prestador.trim() || null,
       notas: editForm.notas.trim() || null,
+      fecha_limite: editForm.fecha_solicitud ? null : (editForm.fecha_limite || null),
     }).eq("id", id);
     setSavingEdit(false);
     setSavedEdit(true);
@@ -264,6 +269,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const estadoCfg = ESTADO_CONFIG[examen.estado === "en_proceso" ? "pendiente" : examen.estado] ?? ESTADO_CONFIG.pendiente;
+  const limiteExamen = examen.estado === "listo" ? null : estadoLimite(examen.fecha_limite);
   const fechaTexto = examen.fecha_solicitud
     ? new Date(examen.fecha_solicitud + "T12:00:00").toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
     : undefined;
@@ -468,6 +474,26 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                   className="rounded-lg border-border bg-card h-9 w-full"
                 />
               </PropRow>
+
+              {/* Plazo para agendarlo (solo si aún no tiene fecha) */}
+              {!examen.fecha_solicitud && (
+                <PropRow
+                  icon={CalendarClock}
+                  label="Plazo"
+                  value={limiteExamen ? limiteExamen.largo : undefined}
+                  placeholder="Sin plazo definido"
+                  isEditing={editingField === "fecha_limite"}
+                  onStartEdit={() => setEditingField("fecha_limite")}
+                  onSave={() => handleGuardarEdicion("fecha_limite")}
+                  onCancel={() => setEditingField(null)}
+                >
+                  <DatePicker
+                    value={editForm.fecha_limite}
+                    onChange={val => setEditForm(f => ({ ...f, fecha_limite: val }))}
+                    className="rounded-lg border-border bg-card h-9 w-full"
+                  />
+                </PropRow>
+              )}
 
               {/* Hora */}
               <PropRow

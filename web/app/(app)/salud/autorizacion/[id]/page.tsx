@@ -15,15 +15,15 @@ import { crearNotificacion } from "@/lib/supabase/notificaciones";
 import type { AutorizacionEPS, TipoAutorizacion, EstadoAutorizacion } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
-function diasRestantes(fechaOrden: string) {
+function diasRestantes(fechaOrden: string, vigencia = 120) {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigencia);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 
-function vencimientoTexto(fechaOrden: string) {
+function vencimientoTexto(fechaOrden: string, vigencia = 120) {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigencia);
   const dias = Math.ceil((venc.getTime() - Date.now()) / 86400000);
   const fechaStr = venc.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   if (dias <= 0)  return { txt: `Venció el ${fechaStr}`, color: "#c62828", bg: "#FFEBEE" };
@@ -62,6 +62,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
     descripcion: "",
     tipo: "examen" as TipoAutorizacion,
     fecha_orden: "",
+    vigencia_dias: "120",
     estado: "sin_gestionar" as EstadoAutorizacion,
     fecha_envio_eps: "",
     numero_autorizacion: "",
@@ -88,6 +89,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
         descripcion:         data.descripcion ?? "",
         tipo:                data.tipo ?? "examen",
         fecha_orden:         data.fecha_orden ?? "",
+        vigencia_dias:       String(data.vigencia_dias ?? 120),
         estado:              data.estado ?? "sin_gestionar",
         fecha_envio_eps:     data.fecha_envio_eps ?? "",
         numero_autorizacion: data.numero_autorizacion ?? "",
@@ -111,6 +113,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
       descripcion:         editForm.descripcion.trim(),
       tipo:                editForm.tipo,
       fecha_orden:         editForm.fecha_orden,
+      vigencia_dias:       parseInt(editForm.vigencia_dias) || 120,
       estado:              editForm.estado,
       fecha_envio_eps:     editForm.fecha_envio_eps     || null,
       numero_autorizacion: editForm.numero_autorizacion.trim() || null,
@@ -161,8 +164,9 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
     );
   }
 
-  const venc = auth?.fecha_orden ? vencimientoTexto(auth.fecha_orden) : null;
-  const dias = auth?.fecha_orden ? diasRestantes(auth.fecha_orden) : 999;
+  const vigencia = auth?.vigencia_dias ?? 120;
+  const venc = auth?.fecha_orden ? vencimientoTexto(auth.fecha_orden, vigencia) : null;
+  const dias = auth?.fecha_orden ? diasRestantes(auth.fecha_orden, vigencia) : 999;
   const semColor = dias > 30 ? "#2E7D6A" : dias > 15 ? "#e65100" : "#c62828";
   const estadoCfg = ESTADO_CONFIG[auth?.estado ?? "sin_gestionar"];
 
@@ -329,13 +333,30 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                 />
               </PropRow>
 
-              {/* Vigencia (solo lectura) */}
+              {/* Vigencia (editable: días de validez de la orden) */}
               {auth?.fecha_orden && venc && (
-                <div className="flex items-start gap-3 px-2 py-2.5">
-                  <Clock size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground w-24 shrink-0 pt-0.5">Vigencia</span>
-                  <span className="text-sm flex-1" style={{ color: venc.color }}>{venc.txt}</span>
-                </div>
+                <PropRow
+                  icon={Clock}
+                  label="Vigencia"
+                  value={venc.txt}
+                  placeholder="Sin vigencia"
+                  isEditing={editingField === "vigencia_dias"}
+                  onStartEdit={() => setEditingField("vigencia_dias")}
+                  onSave={() => handleGuardar()}
+                  onCancel={() => setEditingField(null)}
+                >
+                  <div className="flex items-center gap-2 w-full">
+                    <Input
+                      autoFocus
+                      type="number" min="1" max="365"
+                      value={editForm.vigencia_dias}
+                      onChange={e => setEditForm(f => ({ ...f, vigencia_dias: e.target.value }))}
+                      className="h-9 rounded-lg w-24"
+                      onKeyDown={e => { if (e.key === "Enter") handleGuardar(); }}
+                    />
+                    <span className="text-xs text-muted-foreground">días de vigencia</span>
+                  </div>
+                </PropRow>
               )}
 
               {/* Fecha envío EPS — solo si aplica */}
@@ -549,7 +570,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
-                      width: `${Math.max(0, Math.min(100, (dias / 120) * 100))}%`,
+                      width: `${Math.max(0, Math.min(100, (dias / vigencia) * 100))}%`,
                       background: semColor,
                     }}
                   />
@@ -559,7 +580,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Las órdenes de la EPS tienen 120 días de vigencia desde la fecha de emisión.
+                Esta orden tiene {vigencia} días de vigencia desde la fecha de emisión.
               </p>
             </div>
           )}

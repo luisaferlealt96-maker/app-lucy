@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAbuelaData, useMiembros, calcularEdad } from "@/hooks/useSalud";
 import { formatFechaHora } from "@/lib/utils/fecha";
 import { createClient } from "@/lib/supabase/client";
+import { LimiteBadge } from "@/components/ui/limite-badge";
 import { cn } from "@/lib/utils";
 import type { EntregaMedicamento, Cita, Medicamento, Examen, MiembroFamilia, AutorizacionEPS } from "@/lib/supabase/types";
 
@@ -378,7 +379,7 @@ export default function SaludPage() {
           className="grid grid-cols-3 gap-4 mb-5 shrink-0"
         >
           {[
-            { icon: Calendar,     label: "Citas activas",            value: loading ? "–" : citasActivas.length.toString(), accent: "#C0546A", bg: "#F2C5CE", board: "citas"          as const },
+            { icon: Calendar,     label: "Citas por agendar",        value: loading ? "–" : citasPendienteAgendar.length.toString(), accent: "#C0546A", bg: "#F2C5CE", board: "citas"          as const },
             { icon: Pill,         label: "Medicamentos activos",     value: loading ? "–" : medsActivos.length.toString(),  accent: "#2E7D6A", bg: "#B8E2D4", board: "medicamentos"   as const },
             { icon: Activity,     label: "Procedimientos pendientes", value: loading ? "–" : examenes.length.toString(),    accent: "#9B8EC4", bg: "#EDE9F7", board: "examenes"        as const },
           ].map(({ icon: Icon, label, value, accent, bg, board }, i) => (
@@ -535,9 +536,9 @@ export default function SaludPage() {
 
 type PendingMove = { type: "cita" | "examen" | "autorizacion"; id: string; targetCol: string };
 
-function diasRestantesAuth(fechaOrden: string): number {
+function diasRestantesAuth(fechaOrden: string, vigencia = 120): number {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigencia);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 
@@ -1129,6 +1130,7 @@ function CitaCard({ cita, index, authVinculada }: { cita: Cita; index: number; a
               </span>
             </div>
             {cita.medico && <p className="text-xs text-muted-foreground mt-0.5">{cita.medico}</p>}
+            {porAgendar && cita.fecha_limite && <div className="mt-1.5"><LimiteBadge fecha={cita.fecha_limite} /></div>}
             {authVinculada?.numero_autorizacion && (
               <div className="flex items-center gap-1 mt-1.5 px-2 py-1 rounded-lg" style={{ background: "#E8F5E9" }}>
                 <Shield size={10} style={{ color: "#2e7d32" }} />
@@ -1205,6 +1207,7 @@ function MedicamentoCard({ med, index, marcarEntregaReclamada }: {
           </div>
           {med.dosis && <p className="text-xs text-muted-foreground mt-0.5 ml-3.5">{med.dosis}</p>}
           {med.frecuencia && <p className="text-xs text-muted-foreground ml-3.5">{med.frecuencia}</p>}
+          {med.activo && med.fecha_limite && <div className="mt-1.5 ml-3.5"><LimiteBadge fecha={med.fecha_limite} /></div>}
           {proxima && !reclamadas && (
             <p className="text-[11px] font-semibold ml-3.5 mt-1" style={{ color: "#e65100" }}>
               Entrega {proxima.numero_entrega}: {formatFechaCorta(proxima.fecha_programada!)}
@@ -1266,6 +1269,7 @@ function MobileCitaCard({ cita, index }: { cita: Cita; index: number }) {
             </span>
           </div>
           {cita.medico && <p className="text-xs text-muted-foreground mt-0.5">{cita.medico}</p>}
+          {porAgendar && cita.fecha_limite && <div className="mt-1.5"><LimiteBadge fecha={cita.fecha_limite} /></div>}
           <div className="flex items-center gap-4 mt-2 pt-2 border-t border-border">
             {fh ? (
               <div className="flex items-center gap-1">
@@ -1382,6 +1386,7 @@ function MobileMedsList({ medicamentos, medsPorReclamar, medsConEntregas, loadin
             </p>
           )}
           {med.frecuencia && <p className="text-xs text-muted-foreground mt-1.5 ml-4">{med.frecuencia}</p>}
+          {med.activo && med.fecha_limite && <div className="mt-1.5 ml-4"><LimiteBadge fecha={med.fecha_limite} /></div>}
           {med.horas_toma && med.horas_toma.length > 0 && (
             <div className="flex gap-1.5 mt-2 ml-4 flex-wrap">
               {med.horas_toma.map(h => (
@@ -1524,6 +1529,7 @@ function ExamenCard({ examen, index }: { examen: Examen; index: number }) {
               )}
             </div>
             {examen.especialidad && <p className="text-xs text-muted-foreground mt-0.5">{examen.especialidad}</p>}
+            {porAgendar && examen.estado !== "listo" && examen.fecha_limite && <div className="mt-1.5"><LimiteBadge fecha={examen.fecha_limite} /></div>}
             {examen.lugar && (
               <div className="flex items-center gap-1 mt-1">
                 <MapPin size={10} className="text-muted-foreground shrink-0" />
@@ -2185,7 +2191,7 @@ const TIPO_AUTH_LABEL: Record<string, string> = {
 };
 
 function AutorizacionCard({ auth, index }: { auth: AutorizacionEPS; index: number }) {
-  const dias     = diasRestantesAuth(auth.fecha_orden);
+  const dias     = diasRestantesAuth(auth.fecha_orden, auth.vigencia_dias);
   const semColor = dias > 30 ? "#2E7D6A" : dias > 15 ? "#e65100" : "#c62828";
   const semBg    = dias > 30 ? "#B8E2D4" : dias > 15 ? "#FFF3E0" : "#FFEBEE";
 

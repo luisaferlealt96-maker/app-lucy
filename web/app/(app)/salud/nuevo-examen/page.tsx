@@ -19,7 +19,7 @@ import type { TipoAutorizacion } from "@/lib/supabase/types";
 const ESPECIALIDADES = [
   "Cardiología", "Neurología", "Odontología", "Oftalmología",
   "Ortopedia", "Dermatología", "Ginecología", "Urología",
-  "Gastroenterología", "Endocrinología", "Medicina general", "Otra",
+  "Neumología", "Gastroenterología", "Endocrinología", "Medicina general", "Otra",
 ];
 
 function vencimientoTexto(fechaOrden: string, vigenciaDias = 120) {
@@ -65,6 +65,7 @@ function NuevoExamenContent() {
     hora: "",
     acompanante_id: "",
     notas: "",
+    fecha_limite: "",
   });
   const [archivoOrden, setArchivoOrden] = useState<File | null>(null);
   const [otraEsp, setOtraEsp] = useState(false);
@@ -114,6 +115,7 @@ function NuevoExamenContent() {
       hora: tieneFecha && form.hora ? form.hora : null,
       acompanante_id: form.acompanante_id || null,
       notas: form.notas || null,
+      fecha_limite: tieneFecha ? null : (form.fecha_limite || null),
       estado: "pendiente",
       created_by: userId,
     }).select("id").single();
@@ -321,6 +323,18 @@ function NuevoExamenContent() {
             className="rounded-xl border-border bg-card h-11 text-sm"
           />
         </div>
+        {/* Plazo para pedir el examen (solo si aún no tiene fecha) */}
+        {!tieneFecha && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-foreground uppercase tracking-wide">Plazo para agendarlo (opcional)</label>
+            <p className="text-xs text-muted-foreground -mt-0.5">Hasta qué día hay tiempo de pedir la cita (por ejemplo, cuando vence la orden).</p>
+            <DatePicker
+              value={form.fecha_limite}
+              onChange={val => set("fecha_limite", val)}
+              className="rounded-xl border-border bg-card"
+            />
+          </div>
+        )}
 
         {/* Fecha + Ubicación (solo si tiene fecha programada) */}
         <AnimatePresence>

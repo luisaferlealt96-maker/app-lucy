@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, Pill, FileText, Upload, Trash2, ExternalLink,
   Check, Package, X, Plus, Minus, Calendar, RotateCcw, Clock,
-  Edit3, ChevronDown,
+  Edit3, ChevronDown, CalendarClock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArchivoMedicamento, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
+import { estadoLimite } from "@/lib/utils/limite";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Medicamento, EntregaMedicamento } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
     frecuencia: "",
     horas_toma: [] as string[],
     fecha_inicio: "",
+    fecha_limite: "",
     notas: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
@@ -84,6 +86,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
         frecuencia: data.frecuencia ?? "",
         horas_toma: data.horas_toma ?? [],
         fecha_inicio: data.fecha_inicio ?? "",
+        fecha_limite: data.fecha_limite ?? "",
         notas: data.notas ?? "",
       });
     }
@@ -194,6 +197,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
       frecuencia: editForm.frecuencia.trim() || null,
       horas_toma: editForm.horas_toma.length > 0 ? editForm.horas_toma : null,
       fecha_inicio: editForm.fecha_inicio || null,
+      fecha_limite: editForm.fecha_limite || null,
       notas: editForm.notas.trim() || null,
     }).eq("id", id);
     setSavingEdit(false);
@@ -225,6 +229,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
   const entregas = (med.entregas_medicamento ?? []).sort((a, b) => a.numero_entrega - b.numero_entrega);
   const reclamadas = entregas.filter(e => e.estado === "reclamada").length;
   const estadoCfg = ESTADO_CONFIG[med.activo ? "activo" : "inactivo"];
+  const limiteMed = med.activo ? estadoLimite(med.fecha_limite) : null;
 
   return (
     <div className="min-h-dvh bg-background pb-24" onClick={() => showEstadoMenu && setShowEstadoMenu(false)}>
@@ -430,6 +435,24 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                 <DatePicker
                   value={editForm.fecha_inicio}
                   onChange={val => setEditForm(f => ({ ...f, fecha_inicio: val }))}
+                  className="rounded-lg border-border bg-card h-9 w-full"
+                />
+              </PropRow>
+
+              {/* Plazo para reclamarlo */}
+              <PropRow
+                icon={CalendarClock}
+                label="Plazo"
+                value={limiteMed ? limiteMed.largo : undefined}
+                placeholder="Sin plazo definido"
+                isEditing={editingField === "fecha_limite"}
+                onStartEdit={() => setEditingField("fecha_limite")}
+                onSave={handleGuardarEdicion}
+                onCancel={() => setEditingField(null)}
+              >
+                <DatePicker
+                  value={editForm.fecha_limite}
+                  onChange={val => setEditForm(f => ({ ...f, fecha_limite: val }))}
                   className="rounded-lg border-border bg-card h-9 w-full"
                 />
               </PropRow>

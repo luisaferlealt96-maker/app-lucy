@@ -143,6 +143,27 @@ async function crearNotificacion(sb: ReturnType<typeof createClient>, p: NotifPa
   });
 }
 
+type Destino = { id?: string; nombre: string; telefono: string };
+
+// La persona (si tiene teléfono) + sus personas de apoyo activas con teléfono
+async function destinosConApoyos(
+  sb: ReturnType<typeof createClient>,
+  persona: { id: string; nombre: string; telefono: string | null; apoyos?: string[] | null },
+): Promise<Destino[]> {
+  const out: Destino[] = [];
+  if (persona.telefono) out.push({ id: persona.id, nombre: persona.nombre, telefono: persona.telefono });
+  const ids = persona.apoyos ?? [];
+  if (ids.length) {
+    const { data } = await sb.from("miembros_familia")
+      .select("id, nombre, telefono")
+      .in("id", ids)
+      .eq("activo", true)
+      .not("telefono", "is", null);
+    for (const a of (data ?? []) as Destino[]) if (!out.some(o => o.id === a.id)) out.push(a);
+  }
+  return out;
+}
+
 async function getRecipientes(sb: ReturnType<typeof createClient>, createdBy?: string | null) {
   const { data: admins } = await sb.from("miembros_familia")
     .select("nombre, telefono")
@@ -154,13 +175,16 @@ async function getRecipientes(sb: ReturnType<typeof createClient>, createdBy?: s
 
   if (createdBy) {
     const { data: creator } = await sb.from("miembros_familia")
-      .select("nombre, telefono")
+      .select("id, nombre, telefono, apoyos")
       .eq("activo", true)
       .eq("user_id", createdBy)
       .neq("rol", "admin")
-      .not("telefono", "is", null)
       .maybeSingle();
-    if (creator) recipientes.push(creator as { nombre: string; telefono: string });
+    if (creator) {
+      for (const d of await destinosConApoyos(sb, creator)) {
+        if (!recipientes.some(r => r.telefono === d.telefono)) recipientes.push(d);
+      }
+    }
   }
 
   return recipientes;
@@ -218,14 +242,16 @@ serve(async (req) => {
         const hora       = horaCorta(c.fecha_hora);
         const esp        = c.especialidad ?? "Consulta médica";
         const acompNom   = acomp?.nombre ?? "sin asignar";
+        const acompDestinos = acomp ? await destinosConApoyos(sb, acomp) : [];
+        const acompIds   = new Set(acompDestinos.map(d => d.id));
         const familia    = todos.filter((m: { rol: string; id: string; telefono: string | null }) =>
-          m.rol !== "abuela" && m.id !== c.acompanante_id && m.telefono);
+          m.rol !== "abuela" && !acompIds.has(m.id) && m.telefono);
 
         let citaOk = false;
 
-        if (acomp?.telefono) {
-          const ok = await enviarWA(acomp.telefono, "cita_lucy_recordatorio", [
-            { name: "nombre",       value: acomp.nombre },
+        for (const d of acompDestinos) {
+          const ok = await enviarWA(d.telefono, "cita_lucy_recordatorio", [
+            { name: "nombre",       value: d.nombre },
             { name: "especialidad", value: esp },
             { name: "fecha",        value: fecha },
             { name: "hora",         value: hora },
@@ -467,7 +493,7 @@ serve(async (req) => {
     if (tipo === "autorizaciones") {
       const [{ data: autorizaciones }, { data: admins }] = await Promise.all([
         sb.from("autorizaciones_eps").select("*").in("estado", ["sin_gestionar", "en_tramite"]),
-        sb.from("miembros_familia").select("nombre, telefono, user_id, rol").eq("activo", true).not("telefono", "is", null),
+        sb.from("miembros_familia").select("id, nombre, telefono, user_id, rol, apoyos").eq("activo", true).not("telefono", "is", null),
       ]);
       const adminsList = (admins ?? []).filter((m: { rol: string }) => m.rol === "admin") as { nombre: string; telefono: string; user_id: string | null }[];
       let enviados = 0;
@@ -475,8 +501,12 @@ serve(async (req) => {
       for (const a of autorizaciones ?? []) {
         const receptores: { nombre: string; telefono: string }[] = [...adminsList];
         if (a.created_by) {
-          const creator = (admins ?? []).find((m: { user_id: string | null; rol: string }) => m.user_id === a.created_by && m.rol !== "admin") as { nombre: string; telefono: string } | undefined;
-          if (creator) receptores.push(creator);
+          const creator = (admins ?? []).find((m: { user_id: string | null; rol: string }) => m.user_id === a.created_by && m.rol !== "admin") as { id: string; nombre: string; telefono: string; apoyos: string[] | null } | undefined;
+          if (creator) {
+            for (const d of await destinosConApoyos(sb, creator)) {
+              if (!receptores.some(r => r.telefono === d.telefono)) receptores.push(d);
+            }
+          }
         }
         if (receptores.length === 0) continue;
         const diasRestant = diasRestantes(a.fecha_orden, a.vigencia_dias ?? 120);
@@ -630,13 +660,16 @@ serve(async (req) => {
 
       let enviados = 0;
       for (const c of citas ?? []) {
-        const acomp = c.acompanante;
-        if (!acomp?.telefono) continue;
+        const destinos = await destinosConApoyos(sb, c.acompanante);
+        if (destinos.length === 0) continue;
         const esp = c.nombre ?? c.especialidad ?? "Consulta médica";
-        const ok = await enviarWA(acomp.telefono, "cita_lucy_reporte", [
-          { name: "nombre",       value: acomp.nombre },
-          { name: "especialidad", value: esp },
-        ], c.id);
+        let ok = false;
+        for (const d of destinos) {
+          ok = (await enviarWA(d.telefono, "cita_lucy_reporte", [
+            { name: "nombre",       value: d.nombre },
+            { name: "especialidad", value: esp },
+          ], c.id)) || ok;
+        }
         if (ok) {
           await sb.from("citas").update({ recordatorio_post_enviado: true }).eq("id", c.id);
           enviados++;
@@ -652,18 +685,22 @@ serve(async (req) => {
         .eq("id", cita_id)
         .single();
 
-      if (!cita?.acompanante?.telefono) {
+      const destinosReporte = cita?.acompanante ? await destinosConApoyos(sb, cita.acompanante) : [];
+      if (destinosReporte.length === 0) {
         return new Response(JSON.stringify({ ok: true, tipo, enviados: 0, razon: "sin acompañante con teléfono" }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
 
-      const acomp = cita.acompanante;
       const esp = cita.nombre ?? cita.especialidad ?? "Consulta médica";
-      const ok = await enviarWA(acomp.telefono, "cita_lucy_reporte", [
-        { name: "nombre",       value: acomp.nombre },
-        { name: "especialidad", value: esp },
-      ], cita_id);
+      let enviados = 0;
+      for (const d of destinosReporte) {
+        const ok = await enviarWA(d.telefono, "cita_lucy_reporte", [
+          { name: "nombre",       value: d.nombre },
+          { name: "especialidad", value: esp },
+        ], cita_id);
+        if (ok) enviados++;
+      }
 
-      return new Response(JSON.stringify({ ok: true, tipo, enviados: ok ? 1 : 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, tipo, enviados }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // ── RECORDATORIO MANUAL: pedir estado del trámite de autorización ────

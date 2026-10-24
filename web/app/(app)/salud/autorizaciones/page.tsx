@@ -18,9 +18,9 @@ import type { AutorizacionEPS } from "@/lib/supabase/types";
 
 /* ─── helpers ─────────────────────────────────────────────────────── */
 
-function diasRestantes(fechaOrden: string): number {
+function diasRestantes(fechaOrden: string, vigencia = 120): number {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigencia);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 
@@ -242,7 +242,7 @@ export default function AutorizacionesPage() {
                 <p className="text-xs text-muted-foreground">
                   Orden: {new Date(selected.fecha_orden + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}
                   {" · "}{(() => {
-                    const d = diasRestantes(selected.fecha_orden);
+                    const d = diasRestantes(selected.fecha_orden, selected.vigencia_dias);
                     return d > 0 ? `vence en ${d}d` : "vencida";
                   })()}
                 </p>
@@ -435,7 +435,7 @@ function ColumnContent({
 function AutorizacionCard({ a, index, onEdit }: {
   a: AutorizacionEPS; index: number; onEdit: (a: AutorizacionEPS) => void;
 }) {
-  const dias = diasRestantes(a.fecha_orden);
+  const dias = diasRestantes(a.fecha_orden, a.vigencia_dias);
   const sem  = semaforo(dias);
   const diasHab = a.fecha_envio_eps ? diasHabilesDesde(a.fecha_envio_eps) : null;
 
