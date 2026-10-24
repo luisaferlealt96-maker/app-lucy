@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, FlaskConical, FileText, Upload, Trash2,
   MapPin, Calendar, Check, ExternalLink, Clock, X, Pencil, Shield, Users, Bell,
-  Building2, Phone,
+  Building2, Phone, CalendarClock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { uploadDocumentoMedico, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
+import { estadoLimite } from "@/lib/utils/limite";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Examen, AutorizacionEPS, MiembroFamilia } from "@/lib/supabase/types";
 import { useMiembros } from "@/hooks/useSalud";
@@ -57,6 +58,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     lugar: string;
     acompanante_id: string | null;
     notas: string;
+    fecha_limite: string;
   }>({
     nombre: "",
     tipo: "examen",
@@ -66,6 +68,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
     lugar: "",
     acompanante_id: null,
     notas: "",
+    fecha_limite: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savedEdit, setSavedEdit] = useState(false);
@@ -92,6 +95,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
         lugar: data.lugar ?? "",
         acompanante_id: data.acompanante_id ?? "",
         notas: data.notas ?? "",
+        fecha_limite: data.fecha_limite ?? "",
       });
     }
     setLoading(false);
@@ -180,6 +184,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
       lugar: editForm.lugar || null,
       acompanante_id: editForm.acompanante_id || null,
       notas: editForm.notas || null,
+      fecha_limite: editForm.fecha_solicitud ? null : (editForm.fecha_limite || null),
     }).eq("id", id);
     setSavingEdit(false);
     setSavedEdit(true);
@@ -236,6 +241,7 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const estadoStyle = ESTADO_COLOR[examen.estado] ?? ESTADO_COLOR["pendiente"];
+  const limiteExamen = examen.estado === "listo" ? null : estadoLimite(examen.fecha_limite);
   const fechaTexto = examen.fecha_solicitud
     ? new Date(examen.fecha_solicitud + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     : null;
@@ -307,6 +313,12 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                 >
                   Agendar
                 </button>
+              </div>
+            )}
+            {!examen.fecha_solicitud && limiteExamen && (
+              <div className="flex items-center gap-2.5">
+                <CalendarClock size={15} style={{ color: limiteExamen.color }} className="shrink-0" />
+                <span className="text-sm font-semibold" style={{ color: limiteExamen.color }}>{limiteExamen.largo}</span>
               </div>
             )}
             {examen.hora && (
@@ -594,6 +606,18 @@ export default function ExamenDetailPage({ params }: { params: Promise<{ id: str
                   />
                 </div>
               </div>
+
+              {/* Plazo para agendar */}
+              {!editForm.fecha_solicitud && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-foreground uppercase tracking-wide">Plazo para agendarlo (opcional)</label>
+                  <DatePicker
+                    value={editForm.fecha_limite}
+                    onChange={val => setEditForm(f => ({ ...f, fecha_limite: val }))}
+                    className="rounded-xl border-border bg-card"
+                  />
+                </div>
+              )}
 
               {/* Acompañante */}
               <div className="flex flex-col gap-1.5">

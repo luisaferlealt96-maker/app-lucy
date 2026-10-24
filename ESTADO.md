@@ -1,6 +1,6 @@
 # ESTADO — App Familiar Lucy
 
-**Última actualización:** 2026-07-19
+**Última actualización:** 2026-10-24
 **Fase actual:** Pilar de Salud COMPLETO — app en uso
 **Lo siguiente:** Cuando se retome, Finanzas o Administrativo (sin prioridad definida aún)
 
@@ -95,8 +95,17 @@ Los ítems de navegación de Finanzas y Administrativo fueron ocultados del side
 ### Detalle de Autorización EPS (`/salud/autorizacion/[id]`)
 - Estado: sin gestionar / en trámite / autorizada
 - Número de autorización destacado cuando existe
-- Barra de vigencia de 120 días
+- Barra de vigencia según `vigencia_dias` de cada orden (editable, por defecto 120)
 - Editar · Eliminar
+
+### Plazos (`fecha_limite`)
+- Citas, exámenes/procedimientos y medicamentos tienen plazo opcional (migración 003)
+- Se captura al crear (citas/exámenes solo si están por agendar) y al editar
+- Badge verde (>30d) / naranja (≤30d) / rojo (≤7d o vencido) en tarjetas y detalle; helper en `lib/utils/limite.ts`
+
+### Personas de apoyo (`miembros_familia.apoyos`, migración 004)
+- Configuración → editar miembro → "Quién le ayuda a estar pendiente"
+- Edge Function: si el miembro es acompañante o creó la orden, sus apoyos reciben también los avisos (recordatorio de cita, reporte post-cita, autorizaciones, resultados)
 
 ### Creación
 - Nueva cita (`/salud/nueva-cita`)
@@ -152,6 +161,8 @@ web/
 
 ## Pendientes conocidos
 
+- [x] Migraciones 003 y 004 aplicadas en Supabase; Edge Function `notificar-citas` redesplegada (2026-10-24)
+- [ ] Probar en real que un apoyo recibe el WhatsApp
 - [ ] `telefono` en `miembros_familia` — columna agregada manualmente vía SQL (no está en migración)
 - [ ] Columnas extras (`tipo_sangre`, `peso`, `altura`, `alergias`, `condiciones`) — verificar si existen en DB
 - [ ] Supabase MCP apunta al proyecto incorrecto (Calmazen) — migraciones y Edge Functions se hacen via CLI o dashboard

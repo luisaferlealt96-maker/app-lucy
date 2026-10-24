@@ -32,6 +32,7 @@ function NuevoMedicamentoContent() {
     horas_toma: [] as string[],
     fecha_inicio: "",
     total_entregas: 1,
+    fecha_limite: "",
   });
   // Fechas de cada entrega (array dinámico según total_entregas)
   const [fechasEntregas, setFechasEntregas] = useState<string[]>([""]);
@@ -92,6 +93,7 @@ function NuevoMedicamentoContent() {
         frecuencia: form.frecuencia || null,
         horas_toma: form.horas_toma.length > 0 ? form.horas_toma : null,
         fecha_inicio: form.fecha_inicio || null,
+        fecha_limite: form.fecha_limite || null,
         total_entregas: form.total_entregas,
         activo: true,
       })
@@ -317,6 +319,17 @@ function NuevoMedicamentoContent() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Plazo de la fórmula */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-bold text-foreground uppercase tracking-wide">Plazo para reclamarlo (opcional)</label>
+          <p className="text-xs text-muted-foreground -mt-0.5">Hasta qué día vale la fórmula o hay que reclamar el medicamento.</p>
+          <DatePicker
+            value={form.fecha_limite}
+            onChange={val => set("fecha_limite", val)}
+            className="rounded-xl border-border bg-card"
+          />
         </div>
 
         {/* Botón guardar */}

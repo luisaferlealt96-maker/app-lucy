@@ -4,7 +4,7 @@ import { use, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, Pill, FileText, Upload, Trash2, ExternalLink,
-  Check, Package, Circle, X, Pencil, Plus, Minus, Calendar, RotateCcw,
+  Check, Package, Circle, X, Pencil, Plus, Minus, Calendar, RotateCcw, CalendarClock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArchivoMedicamento, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
+import { estadoLimite } from "@/lib/utils/limite";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Medicamento, EntregaMedicamento } from "@/lib/supabase/types";
 
@@ -51,6 +52,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
     frecuencia: "",
     horas_toma: [] as string[],
     fecha_inicio: "",
+    fecha_limite: "",
     notas: "",
   });
   const [nuevaHora, setNuevaHora] = useState("");
@@ -74,6 +76,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
         frecuencia: data.frecuencia ?? "",
         horas_toma: data.horas_toma ?? [],
         fecha_inicio: data.fecha_inicio ?? "",
+        fecha_limite: data.fecha_limite ?? "",
         notas: data.notas ?? "",
       });
     }
@@ -185,6 +188,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
       frecuencia: editForm.frecuencia || null,
       horas_toma: editForm.horas_toma.length > 0 ? editForm.horas_toma : null,
       fecha_inicio: editForm.fecha_inicio || null,
+      fecha_limite: editForm.fecha_limite || null,
       notas: editForm.notas || null,
     }).eq("id", id);
     setSavingEdit(false);
@@ -267,7 +271,7 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
         )}
 
         {/* Info */}
-        {(med.frecuencia || (med.horas_toma && med.horas_toma.length > 0) || med.fecha_inicio || med.notas) && (
+        {(med.frecuencia || (med.horas_toma && med.horas_toma.length > 0) || med.fecha_inicio || med.fecha_limite || med.notas) && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
             className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-3">
             {med.frecuencia && (
@@ -293,6 +297,17 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                 <p className="text-sm font-semibold text-foreground">{formatFechaCorta(med.fecha_inicio)}</p>
               </div>
             )}
+            {med.fecha_limite && (() => {
+              const lim = estadoLimite(med.fecha_limite);
+              return lim ? (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-0.5">Plazo para reclamarlo</p>
+                  <p className="text-sm font-semibold flex items-center gap-1.5" style={{ color: lim.color }}>
+                    <CalendarClock size={14} />{lim.largo}
+                  </p>
+                </div>
+              ) : null;
+            })()}
             {med.notas && (
               <p className="text-sm text-muted-foreground border-t border-border pt-2.5 mt-0.5">{med.notas}</p>
             )}
@@ -630,6 +645,16 @@ export default function MedicamentoDetailPage({ params }: { params: Promise<{ id
                 <DatePicker
                   value={editForm.fecha_inicio}
                   onChange={val => setEditForm(f => ({ ...f, fecha_inicio: val }))}
+                  className="rounded-xl border-border bg-card"
+                />
+              </div>
+
+              {/* Plazo */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-foreground uppercase tracking-wide">Plazo para reclamarlo (opcional)</label>
+                <DatePicker
+                  value={editForm.fecha_limite}
+                  onChange={val => setEditForm(f => ({ ...f, fecha_limite: val }))}
                   className="rounded-xl border-border bg-card"
                 />
               </div>

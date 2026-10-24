@@ -12,15 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import type { AutorizacionEPS, TipoAutorizacion, EstadoAutorizacion } from "@/lib/supabase/types";
 
-function diasRestantes(fechaOrden: string) {
+function diasRestantes(fechaOrden: string, vigencia = 120) {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigencia);
   return Math.ceil((venc.getTime() - Date.now()) / 86400000);
 }
 
-function vencimientoTexto(fechaOrden: string) {
+function vencimientoTexto(fechaOrden: string, vigencia = 120) {
   const venc = new Date(fechaOrden + "T12:00:00");
-  venc.setDate(venc.getDate() + 120);
+  venc.setDate(venc.getDate() + vigencia);
   const dias = Math.ceil((venc.getTime() - Date.now()) / 86400000);
   const fechaStr = venc.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
   if (dias <= 0)  return { txt: `Venció el ${fechaStr}`, color: "#c62828", bg: "#FFEBEE" };
@@ -55,6 +55,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
     descripcion: "",
     tipo: "examen" as TipoAutorizacion,
     fecha_orden: "",
+    vigencia_dias: "120",
     estado: "sin_gestionar" as EstadoAutorizacion,
     fecha_envio_eps: "",
     numero_autorizacion: "",
@@ -81,6 +82,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
         descripcion:         data.descripcion ?? "",
         tipo:                data.tipo ?? "examen",
         fecha_orden:         data.fecha_orden ?? "",
+        vigencia_dias:       String(data.vigencia_dias ?? 120),
         estado:              data.estado ?? "sin_gestionar",
         fecha_envio_eps:     data.fecha_envio_eps ?? "",
         numero_autorizacion: data.numero_autorizacion ?? "",
@@ -103,6 +105,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
       descripcion:         editForm.descripcion,
       tipo:                editForm.tipo,
       fecha_orden:         editForm.fecha_orden,
+      vigencia_dias:       parseInt(editForm.vigencia_dias) || 120,
       estado:              editForm.estado,
       fecha_envio_eps:     editForm.fecha_envio_eps     || null,
       numero_autorizacion: editForm.numero_autorizacion || null,
@@ -128,8 +131,9 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
   const set = (k: keyof typeof editForm, v: string) =>
     setEditForm(f => ({ ...f, [k]: v }));
 
-  const venc = auth?.fecha_orden ? vencimientoTexto(auth.fecha_orden) : null;
-  const dias = auth?.fecha_orden ? diasRestantes(auth.fecha_orden) : 999;
+  const vigencia = auth?.vigencia_dias ?? 120;
+  const venc = auth?.fecha_orden ? vencimientoTexto(auth.fecha_orden, vigencia) : null;
+  const dias = auth?.fecha_orden ? diasRestantes(auth.fecha_orden, vigencia) : 999;
   const semColor = dias > 30 ? "#2E7D6A" : dias > 15 ? "#e65100" : "#c62828";
   const estadoConf = auth ? ESTADO_CONFIG[auth.estado] : null;
 
@@ -328,7 +332,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${Math.max(0, Math.min(100, (dias / 120) * 100))}%`,
+                        width: `${Math.max(0, Math.min(100, (dias / vigencia) * 100))}%`,
                         background: semColor,
                       }}
                     />
@@ -338,7 +342,7 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Las órdenes de la EPS tienen 120 días de vigencia desde la fecha de emisión.
+                  Esta orden tiene {vigencia} días de vigencia desde la fecha de emisión.
                 </p>
               </div>
             )}
@@ -526,6 +530,17 @@ export default function DetalleAutorizacionPage({ params }: { params: Promise<{ 
                   value={editForm.fecha_orden}
                   onChange={val => set("fecha_orden", val)}
                   className="rounded-xl border-border bg-card"
+                />
+              </div>
+
+              {/* Vigencia */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wide text-foreground">Vigencia de la orden (días)</label>
+                <Input
+                  type="number" min="1" max="365"
+                  value={editForm.vigencia_dias}
+                  onChange={e => set("vigencia_dias", e.target.value)}
+                  className="rounded-xl border-border bg-card h-12"
                 />
               </div>
 

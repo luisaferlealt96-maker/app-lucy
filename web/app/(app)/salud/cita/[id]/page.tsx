@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft, Calendar, Clock, MapPin, User, FileText, Check,
   Edit3, Upload, Trash2, ExternalLink, MessageSquare, X, Mic, Bell,
-  Shield, Building2, Phone, ChevronDown, ChevronUp,
+  Shield, Building2, Phone, ChevronDown, ChevronUp, CalendarClock,
 } from "lucide-react";
 import { VoiceRecorder } from "@/components/ui/voice-recorder";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArchivoCita, getUrlDocumento, deleteDocumento } from "@/lib/supabase/storage";
 import { formatFechaHora } from "@/lib/utils/fecha";
+import { estadoLimite } from "@/lib/utils/limite";
 import { NotasSeguimiento } from "@/components/ui/notas-seguimiento";
 import type { Cita, MiembroFamilia, AutorizacionEPS } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,7 @@ import { cn } from "@/lib/utils";
 const ESPECIALIDADES = [
   "Cardiología", "Neurología", "Odontología", "Oftalmología",
   "Ortopedia", "Dermatología", "Ginecología", "Urología",
-  "Gastroenterología", "Endocrinología", "Psiquiatría", "Medicina general",
+  "Neumología", "Gastroenterología", "Endocrinología", "Psiquiatría", "Medicina general",
   "Nutrición", "Fisioterapia", "Otra",
 ];
 
@@ -68,7 +69,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
   const [savingAuth, setSavingAuth] = useState(false);
   const [editForm, setEditForm] = useState({
     nombre: "", especialidad: "", medico: "",
-    fecha: "", hora: "", lugar: "", lugar_detalle: "", acompanante_id: "",
+    fecha: "", hora: "", lugar: "", lugar_detalle: "", acompanante_id: "", fecha_limite: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [savedEdit, setSavedEdit] = useState(false);
@@ -117,6 +118,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
         lugar: data.lugar ?? "",
         lugar_detalle: data.lugar_detalle ?? "",
         acompanante_id: data.acompanante_id ?? "",
+        fecha_limite: data.fecha_limite ?? "",
       });
     }
     setLoading(false);
@@ -248,6 +250,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
         ? new Date(`${editForm.fecha}T${editForm.hora}`).toISOString()
         : null,
       acompanante_id: editForm.acompanante_id || null,
+      fecha_limite: editForm.fecha_limite || null,
       estado: tieneFechaCompleta && cita.estado === "por_agendar" ? "pendiente" : cita.estado,
       recordatorio_enviado: tieneFechaCompleta ? false : undefined,
     }).eq("id", id);
@@ -296,6 +299,7 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
     await cargar();
   };
 
+  const limiteCita = cita?.estado === "completada" || cita?.estado === "cancelada" ? null : estadoLimite(cita?.fecha_limite);
   const { fecha, hora } = (cita?.fecha_hora)
     ? formatFechaHora(cita.fecha_hora)
     : { fecha: "Sin fecha asignada", hora: "" };
@@ -432,7 +436,9 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     style={{ background: "#FFF3E0", border: "1.5px solid #FFB74D" }}
                   >
                     <Clock size={14} color="#e65100" className="shrink-0" />
-                    <p className="text-sm flex-1" style={{ color: "#e65100" }}>Falta asignar fecha</p>
+                    <p className="text-sm flex-1" style={{ color: limiteCita?.color ?? "#e65100" }}>
+                      Falta asignar fecha{limiteCita ? ` · ${limiteCita.largo}` : ""}
+                    </p>
                     <button
                       onClick={() => setEditingField("fecha")}
                       className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-white"
@@ -503,6 +509,26 @@ export default function DetalleCitaPage({ params }: { params: Promise<{ id: stri
                     className="rounded-lg border-border bg-card h-9 w-full"
                   />
                 </PropRow>
+
+                {/* Plazo para pedir la cita */}
+                {(cita?.estado === "por_agendar" || cita?.fecha_limite) && (
+                  <PropRow
+                    icon={CalendarClock}
+                    label="Plazo"
+                    value={limiteCita ? limiteCita.largo : undefined}
+                    placeholder="Sin plazo definido"
+                    isEditing={editingField === "fecha_limite"}
+                    onStartEdit={() => setEditingField("fecha_limite")}
+                    onSave={() => handleGuardarEdicion("fecha_limite")}
+                    onCancel={() => setEditingField(null)}
+                  >
+                    <DatePicker
+                      value={editForm.fecha_limite}
+                      onChange={val => setEditForm(f => ({ ...f, fecha_limite: val }))}
+                      className="rounded-lg border-border bg-card h-9 w-full"
+                    />
+                  </PropRow>
+                )}
 
                 {/* Hora */}
                 <PropRow

@@ -38,7 +38,7 @@ export default function ConfiguracionPage() {
   const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState<MiembroFamilia | null>(null);
-  const [editForm, setEditForm] = useState({ nombre: "", emoji: "🧑", telefono: "", email: "", rol: "familiar" as Rol, activo: true });
+  const [editForm, setEditForm] = useState({ nombre: "", emoji: "🧑", telefono: "", email: "", rol: "familiar" as Rol, activo: true, apoyos: [] as string[] });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -77,6 +77,7 @@ export default function ConfiguracionPage() {
       email: m.email ?? "",
       rol: m.rol,
       activo: m.activo,
+      apoyos: m.apoyos ?? [],
     });
     setSaveError(null);
     setInviteError(null);
@@ -112,6 +113,7 @@ export default function ConfiguracionPage() {
       email: editForm.email || null,
       rol: editForm.rol,
       activo: editForm.activo,
+      apoyos: editForm.apoyos,
     }).eq("id", editando.id);
     setSaving(false);
     if (error) { setSaveError(error.message); return; }
@@ -299,6 +301,11 @@ export default function ConfiguracionPage() {
                             <Link2Off size={10} /> Sin cuenta
                           </span>
                         )}
+                        {(m.apoyos ?? []).length > 0 && (
+                          <span className="text-[11px] font-semibold text-muted-foreground">
+                            Apoyo: {(m.apoyos ?? []).map(id => miembros.find(o => o.id === id)?.nombre.split(" ")[0]).filter(Boolean).join(", ")}
+                          </span>
+                        )}
                         {!m.activo && (
                           <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400">
                             Inactivo
@@ -439,6 +446,40 @@ export default function ConfiguracionPage() {
                     placeholder="+57 300 000 0000" className="rounded-xl border-border bg-card h-12 pl-9" />
                 </div>
               </div>
+
+              {/* Personas de apoyo */}
+              {editando.rol !== "abuela" && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase tracking-wide text-foreground">Quién le ayuda a estar pendiente</label>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Todo lo que se le asigne a {editForm.nombre || "esta persona"} (recordatorios de citas, reportes, órdenes) también le llega a estas personas.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {miembros.filter(o => o.id !== editando.id && o.activo && o.rol !== "abuela").map(o => {
+                      const on = editForm.apoyos.includes(o.id);
+                      return (
+                        <button key={o.id} type="button"
+                          onClick={() => setEditForm(f => ({
+                            ...f,
+                            apoyos: on ? f.apoyos.filter(x => x !== o.id) : [...f.apoyos, o.id],
+                          }))}
+                          className="flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-all active:scale-95"
+                          style={on
+                            ? { borderColor: "#9B8EC4", background: "#EDE9F7", color: "#9B8EC4" }
+                            : { borderColor: "var(--border)", color: "var(--foreground)" }}>
+                          <span>{o.emoji}</span>{o.nombre}
+                          {on && <Check size={12} strokeWidth={3} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {editForm.apoyos.some(id => !miembros.find(o => o.id === id)?.telefono) && (
+                    <p className="text-xs font-semibold" style={{ color: "#e65100" }}>
+                      Alguien de la lista no tiene WhatsApp registrado, así que no le llegarán avisos hasta que lo agregues.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Rol */}
               {isAdmin && (

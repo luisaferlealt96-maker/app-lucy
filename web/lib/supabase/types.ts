@@ -19,6 +19,7 @@ export interface MiembroFamilia {
   alergias: string | null;
   condiciones: string | null;
   telefono: string | null;
+  apoyos: string[];
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +33,7 @@ export interface Cita {
   medico: string | null;
   lugar: string | null;
   fecha_hora: string | null;
+  fecha_limite: string | null;
   notas_pre: string | null;
   notas_post: string | null;
   estado: EstadoCita;
@@ -68,6 +70,7 @@ export interface Medicamento {
   horas_toma: string[] | null;
   fecha_inicio: string | null;
   fecha_fin: string | null;
+  fecha_limite: string | null;
   total_entregas: number;
   activo: boolean;
   notas: string | null;
@@ -86,6 +89,7 @@ export interface Examen {
   nombre: string;
   especialidad: string | null;
   fecha_solicitud: string | null;
+  fecha_limite: string | null;
   hora: string | null;
   fecha_resultado: string | null;
   lugar: string | null;

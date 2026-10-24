@@ -19,7 +19,7 @@ import { uploadArchivoCita } from "@/lib/supabase/storage";
 const ESPECIALIDADES = [
   "Cardiología", "Neurología", "Odontología", "Oftalmología",
   "Ortopedia", "Dermatología", "Ginecología", "Urología",
-  "Gastroenterología", "Endocrinología", "Psiquiatría", "Medicina general",
+  "Neumología", "Gastroenterología", "Endocrinología", "Psiquiatría", "Medicina general",
   "Nutrición", "Fisioterapia", "Otra",
 ];
 
@@ -59,6 +59,7 @@ function NuevaCitaContent() {
     fecha: "",
     hora: "",
     notas_pre: "",
+    fecha_limite: "",
   });
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [archivoOrden, setArchivoOrden] = useState<File | null>(null);
@@ -123,6 +124,7 @@ function NuevaCitaContent() {
       lugar_detalle: tieneFecha ? (form.lugar_detalle || null) : null,
       fecha_hora: tieneFecha ? new Date(`${form.fecha}T${form.hora}`).toISOString() : null,
       notas_pre: form.notas_pre || null,
+      fecha_limite: tieneFecha ? null : (form.fecha_limite || null),
       audio_url,
       estado: tieneFecha ? "pendiente" : "por_agendar",
     }).select("id").single();
@@ -295,6 +297,19 @@ function NuevaCitaContent() {
             className="rounded-xl border-border bg-card h-12"
           />
         </div>
+
+        {/* Plazo para pedir la cita (solo si aún no tiene fecha) */}
+        {!tieneFecha && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-foreground uppercase tracking-wide">Plazo para pedir la cita (opcional)</label>
+            <p className="text-xs text-muted-foreground -mt-0.5">Hasta qué día hay tiempo de pedirla (por ejemplo, cuando vence la orden).</p>
+            <DatePicker
+              value={form.fecha_limite}
+              onChange={val => set("fecha_limite", val)}
+              className="rounded-xl border-border bg-card"
+            />
+          </div>
+        )}
 
         {/* Fecha, hora y ubicación */}
         <AnimatePresence>
