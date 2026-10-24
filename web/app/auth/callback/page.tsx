@@ -14,6 +14,8 @@ export default function AuthCallbackPage() {
         const supabase = createClient();
         const searchParams = new URLSearchParams(window.location.search);
         const isInvite = searchParams.get("invite") === "1";
+        const esGoogle = sessionStorage.getItem("__google_login") === "1";
+        sessionStorage.removeItem("__google_login");
 
         const ir = async (userId: string, email: string | null | undefined, forceSetPassword = false) => {
           setMsg("Buscando tu perfil...");
@@ -37,6 +39,17 @@ export default function AuthCallbackPage() {
                 .eq("id", porEmail.id);
               miembro = porEmail;
             }
+          }
+
+          // Google: solo entran correos que ya están registrados en la familia
+          if (esGoogle && !miembro) {
+            await supabase.auth.signOut();
+            sessionStorage.setItem(
+              "__login_error",
+              "Ese correo de Google no está registrado en la familia. Pide que te inviten con ese mismo correo.",
+            );
+            window.location.href = "/login";
+            return;
           }
 
           // Invitaciones nuevas: ir primero a crear contraseña
