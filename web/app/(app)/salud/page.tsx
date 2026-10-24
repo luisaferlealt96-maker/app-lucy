@@ -1669,7 +1669,7 @@ function descargarSemanaImagen(weekDays: Date[], eventMap: Map<string, CalEvent[
   ctx.fillStyle = "#AAA";
   ctx.font = "11px system-ui, sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText("App Lucy · app-lucy.vercel.app", W - 16, H - 8);
+  ctx.fillText("App Lucy · app-lucy-family.vercel.app", W - 16, H - 8);
 
   const link = document.createElement("a");
   link.download = `lucy-semana-${weekDays[0].toISOString().slice(0,10)}.png`;

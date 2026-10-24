@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   const { email, nombre } = await req.json();
   if (!email) return NextResponse.json({ error: "Email requerido" }, { status: 400 });
 
-  const origin     = sanitize(req.headers.get("origin") ?? "https://app-lucy.vercel.app");
+  const origin     = sanitize(req.headers.get("origin") ?? "https://app-lucy-family.vercel.app");
   const supabaseUrl = sanitize(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
   const serviceKey  = sanitize(process.env.SUPABASE_SECRET_KEY ?? "");
 

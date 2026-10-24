@@ -87,7 +87,7 @@ function diasDesde(fechaStr: string): number {
 }
 
 // Plantilla WA: "Hola {{nombre}}, tienes pendiente por agendar: {{detalle}}. ..."
-// con botón URL dinámico: https://app-lucy-ruby.vercel.app/{{1}}
+// con botón URL dinámico: https://app-lucy-family.vercel.app/{{1}}
 const TEMPLATE_POR_AGENDAR = "pendiente_agendar_lucy";
 const IDIOMA_POR_AGENDAR = "es"; // la plantilla se creó en "Español" (es), no "Español (Colombia)"
 
